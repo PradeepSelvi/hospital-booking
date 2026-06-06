@@ -1,0 +1,202 @@
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import Navbar from '../components/Navbar'
+import Footer from '../components/Footer'
+
+const SPECIALIZATIONS = [
+  { icon: 'bi-heart-pulse', name: 'Cardiology', desc: 'Heart & Blood Vessels' },
+  { icon: 'bi-lightning', name: 'Neurology', desc: 'Brain & Nervous System' },
+  { icon: 'bi-bone', name: 'Orthopedics', desc: 'Bones & Joints' },
+  { icon: 'bi-emoji-smile', name: 'Pediatrics', desc: 'Child Healthcare' },
+  { icon: 'bi-droplet', name: 'Dermatology', desc: 'Skin & Hair' },
+  { icon: 'bi-eye', name: 'Ophthalmology', desc: 'Eye Care' },
+  { icon: 'bi-lungs', name: 'General Physician', desc: 'General Healthcare' },
+  { icon: 'bi-clipboard2-pulse', name: 'Psychiatry', desc: 'Mental Health' },
+]
+
+const STEPS = [
+  { icon: 'bi-search', num: '01', title: 'Search Doctor', desc: 'Browse our network of qualified doctors by specialization, name, or department.' },
+  { icon: 'bi-calendar-check', num: '02', title: 'Book Appointment', desc: 'Pick a convenient date and time slot that works for your schedule.' },
+  { icon: 'bi-check-circle', num: '03', title: 'Get Confirmation', desc: 'Receive instant confirmation via email and SMS with appointment details.' },
+]
+
+export default function LandingPage() {
+  const [searchQuery, setSearchQuery] = useState('')
+  const navigate = useNavigate()
+
+  function handleSearch(e) {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      navigate(`/doctors?search=${encodeURIComponent(searchQuery)}`)
+    } else {
+      navigate('/doctors')
+    }
+  }
+
+  return (
+    <div>
+      <Navbar />
+
+      {/* ── Hero Section ── */}
+      <section className="hero-section">
+        <div className="container" style={{ position: 'relative', zIndex: 2 }}>
+          <div className="row align-items-center">
+            <div className="col-lg-7">
+              <div className="section-badge" style={{ background: 'rgba(0,180,216,0.15)', color: 'var(--primary-light)' }}>
+                #1 Hospital Booking Platform
+              </div>
+              <h1 className="hero-title">
+                Book Your Doctor<br />
+                <span style={{ color: 'var(--primary-light)' }}>Appointment</span> Online
+              </h1>
+              <p className="hero-subtitle">
+                Skip the queues and book appointments with top specialists instantly.
+                Real-time availability, smart reminders, and seamless healthcare experience.
+              </p>
+
+              {/* Search Bar */}
+              <form onSubmit={handleSearch}>
+                <div className="hero-search-bar">
+                  <i className="bi bi-search" style={{ color: 'var(--gray-400)', fontSize: 20 }} />
+                  <input
+                    id="hero-search"
+                    type="text"
+                    placeholder="Search doctors, specializations..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                  />
+                  <button type="submit" className="btn-primary-custom" style={{ padding: '12px 28px', borderRadius: 'var(--radius-lg)' }}>
+                    Search
+                  </button>
+                </div>
+              </form>
+
+              {/* Stats */}
+              <div className="d-flex gap-5 mt-5">
+                {[
+                  { value: '200+', label: 'Expert Doctors' },
+                  { value: '50K+', label: 'Happy Patients' },
+                  { value: '15+', label: 'Specializations' },
+                ].map(stat => (
+                  <div key={stat.label}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: 'white', fontFamily: 'var(--font-display)' }}>
+                      {stat.value}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>
+                      {stat.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── How It Works ── */}
+      <section style={{ padding: '80px 0', background: 'white' }}>
+        <div className="container">
+          <div className="text-center mb-5">
+            <div className="section-badge">Simple Process</div>
+            <h2 className="section-title">How It Works</h2>
+            <p className="section-subtitle">Book your appointment in 3 easy steps</p>
+          </div>
+
+          <div className="row g-4 stagger-children">
+            {STEPS.map((step, i) => (
+              <div key={i} className="col-md-4">
+                <div className="card-custom p-4 text-center h-100" style={{ border: 'none' }}>
+                  <div style={{
+                    width: 72, height: 72, borderRadius: 'var(--radius-lg)',
+                    background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 20px',
+                    boxShadow: '0 8px 24px rgba(0,119,182,0.3)'
+                  }}>
+                    <i className={`bi ${step.icon}`} style={{ fontSize: 28, color: 'white' }} />
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)', letterSpacing: 1 }}>
+                    STEP {step.num}
+                  </span>
+                  <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, margin: '10px 0 8px', color: 'var(--dark)' }}>
+                    {step.title}
+                  </h5>
+                  <p style={{ color: 'var(--gray-500)', fontSize: 14, lineHeight: 1.7, margin: 0 }}>
+                    {step.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Specializations ── */}
+      <section style={{ padding: '80px 0', background: 'var(--gray-50)' }}>
+        <div className="container">
+          <div className="text-center mb-5">
+            <div className="section-badge">Our Experts</div>
+            <h2 className="section-title">Browse by Specialization</h2>
+            <p className="section-subtitle">Find the right specialist for your needs</p>
+          </div>
+
+          <div className="row g-3 stagger-children">
+            {SPECIALIZATIONS.map((spec, i) => (
+              <div key={i} className="col-6 col-md-3">
+                <div
+                  className="card-custom p-4 text-center cursor-pointer h-100"
+                  onClick={() => navigate(`/doctors?spec=${encodeURIComponent(spec.name)}`)}
+                  style={{ border: 'none' }}
+                >
+                  <div style={{
+                    width: 56, height: 56, borderRadius: 'var(--radius-md)',
+                    background: 'rgba(0,119,182,0.08)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 14px'
+                  }}>
+                    <i className={`bi ${spec.icon}`} style={{ fontSize: 24, color: 'var(--primary)' }} />
+                  </div>
+                  <h6 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, margin: '0 0 4px', color: 'var(--dark)' }}>
+                    {spec.name}
+                  </h6>
+                  <p style={{ fontSize: 12, color: 'var(--gray-400)', margin: 0 }}>{spec.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section style={{
+        padding: '80px 0',
+        background: 'linear-gradient(135deg, var(--dark) 0%, #0A2A6E 40%, var(--primary) 100%)',
+        position: 'relative', overflow: 'hidden'
+      }}>
+        <div style={{
+          position: 'absolute', width: 400, height: 400, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(0,180,216,0.15) 0%, transparent 70%)',
+          top: -100, right: -50
+        }} />
+        <div className="container text-center" style={{ position: 'relative', zIndex: 2 }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem, 3vw, 2.6rem)', fontWeight: 800, color: 'white' }}>
+            Ready to Book Your Appointment?
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 16, marginTop: 12, maxWidth: 500, marginLeft: 'auto', marginRight: 'auto' }}>
+            Join thousands of patients who trust MediBook for their healthcare needs.
+          </p>
+          <div className="d-flex gap-3 justify-content-center mt-4">
+            <Link to="/register" className="btn-primary-custom" style={{ background: 'white', color: 'var(--primary)', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+              Get Started Free <i className="bi bi-arrow-right" />
+            </Link>
+            <Link to="/doctors" className="btn-outline-custom" style={{ borderColor: 'rgba(255,255,255,0.4)', color: 'white' }}>
+              Browse Doctors
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+    </div>
+  )
+}
