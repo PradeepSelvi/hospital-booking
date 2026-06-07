@@ -21,6 +21,7 @@ import NotificationCenter from './pages/NotificationCenter'
 import PatientDashboard from './pages/patient/PatientDashboard'
 import MyAppointments from './pages/patient/MyAppointments'
 import NotificationPreferences from './pages/patient/NotificationPreferences'
+import PatientProfile from './pages/patient/PatientProfile'
 
 // Doctor Pages
 import DoctorLayout from './pages/doctor/DoctorLayout'
@@ -37,6 +38,7 @@ import ManagePatients from './pages/admin/ManagePatients'
 import AdminAppointments from './pages/admin/AdminAppointments'
 import Reports from './pages/admin/Reports'
 import AdminWhatsAppPanel from './pages/admin/AdminWhatsAppPanel'
+import AdminProfile from './pages/admin/AdminProfile'
 
 export default function App() {
   return (
@@ -76,6 +78,11 @@ export default function App() {
                   <NotificationPreferences />
                 </ProtectedRoute>
               } />
+              <Route path="/patient/profile" element={
+                <ProtectedRoute allowedRoles={['PATIENT']}>
+                  <PatientProfile />
+                </ProtectedRoute>
+              } />
 
               {/* ── Doctor Routes (nested layout) ── */}
               <Route path="/doctor" element={
@@ -101,6 +108,7 @@ export default function App() {
                 <Route path="appointments" element={<AdminAppointments />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="whatsapp" element={<AdminWhatsAppPanel />} />
+                <Route path="profile" element={<AdminProfile />} />
               </Route>
 
               {/* ── 404 ── */}

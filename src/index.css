@@ -1155,6 +1155,202 @@ img { max-width: 100%; display: block; }
   box-shadow: 0 0 0 3px rgba(0,119,182,0.15);
 }
 
+/* ─── Profile Management ─── */
+.profile-avatar-wrapper {
+  position: relative;
+  display: inline-block;
+}
+.profile-avatar-circle {
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  transition: var(--transition);
+  border: 4px solid white;
+  box-shadow: var(--shadow-lg);
+}
+.profile-avatar-circle:hover {
+  box-shadow: 0 8px 30px rgba(0,119,182,0.3);
+}
+.profile-avatar-circle.drag-over {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(0,119,182,0.2);
+}
+.avatar-initials {
+  user-select: none;
+  font-family: var(--font-display);
+}
+.profile-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: white;
+  opacity: 0;
+  transition: var(--transition);
+  cursor: pointer;
+}
+.profile-avatar-circle:hover .profile-avatar-overlay {
+  opacity: 1;
+}
+.profile-avatar-remove {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: white;
+  border: 2px solid white;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+  z-index: 2;
+}
+.profile-avatar-remove:hover {
+  transform: scale(1.1);
+  background: #C1121F;
+}
+
+/* ─── Profile Tabs ─── */
+.profile-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-100);
+}
+.profile-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-main);
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.profile-tab:hover {
+  color: var(--primary);
+  background: rgba(0,119,182,0.05);
+}
+.profile-tab.active {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: white;
+  box-shadow: var(--shadow-blue);
+}
+.profile-tab i {
+  font-size: 16px;
+}
+
+/* ─── Profile Stats ─── */
+.profile-stat {
+  flex: 1;
+  text-align: center;
+  padding: 12px 8px;
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+}
+.profile-stat:hover {
+  background: var(--gray-100);
+}
+.profile-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  line-height: 1;
+}
+.profile-stat-label {
+  font-size: 11px;
+  color: var(--gray-400);
+  font-weight: 500;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ─── Profile Completeness Bar ─── */
+.profile-completeness-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--gray-200);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.profile-completeness-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Password Strength Meter ─── */
+.password-strength-meter {
+  width: 100%;
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.password-strength-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+.password-strength-label {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+/* ─── Danger Zone ─── */
+.deactivate-zone {
+  background: rgba(239,35,60,0.03);
+  border: 1.5px solid rgba(239,35,60,0.2);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+/* ─── Profile Responsive ─── */
+@media (max-width: 768px) {
+  .profile-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .profile-tabs::-webkit-scrollbar { display: none; }
+  .profile-tab { font-size: 13px; padding: 10px 12px; }
+  .profile-tab span { display: none; }
+  .profile-tab i { font-size: 18px; }
+}
+
 /* ─── Enhanced Responsive — Mobile ─── */
 @media (max-width: 768px) {
   .notification-dropdown {

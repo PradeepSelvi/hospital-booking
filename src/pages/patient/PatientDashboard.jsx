@@ -133,6 +133,7 @@ export default function PatientDashboard() {
                 {[
                   { to: '/doctors', icon: 'bi-search', label: 'Find a Doctor', desc: 'Browse specialists', color: 'var(--primary)' },
                   { to: '/patient/appointments', icon: 'bi-calendar2-check', label: 'My Appointments', desc: 'View all bookings', color: 'var(--success)' },
+                  { to: '/patient/profile', icon: 'bi-person-circle', label: 'My Profile', desc: 'Edit your details', color: 'var(--info)' },
                 ].map((action, i) => (
                   <Link
                     key={i}

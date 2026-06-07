@@ -14,6 +14,7 @@ const ADMIN_MENU = [
   { to: '/admin/patients', icon: 'bi-person-lines-fill', label: 'Patients' },
   { to: '/admin/appointments', icon: 'bi-calendar2-week', label: 'Appointments' },
   { to: '/admin/reports', icon: 'bi-graph-up-arrow', label: 'Reports' },
+  { to: '/admin/profile', icon: 'bi-person-circle', label: 'My Profile' },
 ]
 
 export default function Sidebar({ role }) {

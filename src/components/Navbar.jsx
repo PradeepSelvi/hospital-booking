@@ -111,6 +111,11 @@ export default function Navbar() {
                         </Link>
                       </li>
                       <li>
+                        <Link className="dropdown-item py-2" to="/patient/profile">
+                          <i className="bi bi-person-circle me-2" />My Profile
+                        </Link>
+                      </li>
+                      <li>
                         <Link className="dropdown-item py-2" to="/patient/notification-preferences">
                           <i className="bi bi-bell-slash me-2" />Notification Settings
                         </Link>
@@ -118,17 +123,29 @@ export default function Navbar() {
                     </>
                   )}
                   {role === 'DOCTOR' && (
-                    <li>
-                      <Link className="dropdown-item py-2" to="/doctor/dashboard">
-                        <i className="bi bi-grid me-2" />Dashboard
-                      </Link>
-                    </li>
+                    <>
+                      <li>
+                        <Link className="dropdown-item py-2" to="/doctor/dashboard">
+                          <i className="bi bi-grid me-2" />Dashboard
+                        </Link>
+                      </li>
+                      <li>
+                        <Link className="dropdown-item py-2" to="/doctor/profile">
+                          <i className="bi bi-person-circle me-2" />My Profile
+                        </Link>
+                      </li>
+                    </>
                   )}
                   {role === 'ADMIN' && (
                     <>
                       <li>
                         <Link className="dropdown-item py-2" to="/admin/dashboard">
                           <i className="bi bi-grid me-2" />Dashboard
+                        </Link>
+                      </li>
+                      <li>
+                        <Link className="dropdown-item py-2" to="/admin/profile">
+                          <i className="bi bi-person-circle me-2" />My Profile
                         </Link>
                       </li>
                       <li>

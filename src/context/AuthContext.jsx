@@ -142,8 +142,10 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       user, profile, loading, role: profile?.role ?? null,
+      avatarUrl: profile?.avatar_url ?? null,
       signIn, signUp, signOut, resetPassword,
-      refreshProfile: () => user && fetchProfile(user.id)
+      refreshProfile: () => user && fetchProfile(user.id),
+      updateProfileInContext: (updates) => setProfile(prev => prev ? { ...prev, ...updates } : prev)
     }}>
       {children}
       {/* Session Timeout Warning Modal */}
