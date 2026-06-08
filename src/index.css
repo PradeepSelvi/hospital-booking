@@ -25,8 +25,8 @@
   --gray-800: #1E293B;
   --gray-900: #0F172A;
   --white: #FFFFFF;
-  --font-main: 'Inter', system-ui, sans-serif;
-  --font-display: 'Poppins', system-ui, sans-serif;
+  --font-main: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
   --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
   --shadow-lg: 0 10px 15px rgba(0,0,0,0.07), 0 4px 6px rgba(0,0,0,0.05);
@@ -144,6 +144,10 @@ img { max-width: 100%; display: block; }
 .card-custom:hover {
   box-shadow: var(--shadow-xl);
   transform: translateY(-4px);
+}
+.card-custom.card-static:hover {
+  transform: none;
+  box-shadow: var(--shadow-md);
 }
 
 .card-glass {
@@ -1226,6 +1230,26 @@ img { max-width: 100%; display: block; }
 .profile-avatar-remove:hover {
   transform: scale(1.1);
   background: #C1121F;
+}
+
+/* ─── Profile Card Content Fix ─── */
+.profile-card-info {
+  overflow: hidden;
+}
+.profile-card-info h5 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.profile-card-info .profile-contact-text {
+  font-size: 13px;
+  color: var(--gray-600);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  display: block;
 }
 
 /* ─── Profile Tabs ─── */

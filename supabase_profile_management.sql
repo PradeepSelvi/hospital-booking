@@ -79,6 +79,12 @@ ALTER TABLE public.doctors
 ALTER TABLE public.doctors
     ADD COLUMN IF NOT EXISTS registration_number TEXT;
 
+-- Doctor availability status (visible to patients)
+ALTER TABLE public.doctors
+    ADD COLUMN IF NOT EXISTS availability_status TEXT
+    NOT NULL DEFAULT 'AVAILABLE'
+    CHECK (availability_status IN ('AVAILABLE', 'OFFLINE', 'UNAVAILABLE', 'NOT_IN_SERVICE'));
+
 
 -- ─────────────────────────────────────────────
 -- 4. FIX PATIENTS TABLE RLS

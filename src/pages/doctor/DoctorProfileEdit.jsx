@@ -27,7 +27,7 @@ export default function DoctorProfileEdit() {
   const [profForm, setProfForm] = useState({
     specialization: '', qualification: '', experience_years: 0,
     consultation_fee: 0, department_id: '', registration_number: '',
-    languages: []
+    languages: [], availability_status: 'AVAILABLE'
   })
 
   // Languages input
@@ -64,7 +64,8 @@ export default function DoctorProfileEdit() {
           consultation_fee: doc.consultation_fee ?? 0,
           department_id: doc.department_id || '',
           registration_number: doc.registration_number || '',
-          languages: doc.languages || []
+          languages: doc.languages || [],
+          availability_status: doc.availability_status || 'AVAILABLE'
         })
       }
     } catch (err) {
@@ -109,7 +110,8 @@ export default function DoctorProfileEdit() {
         consultation_fee: profForm.consultation_fee,
         department_id: profForm.department_id || null,
         registration_number: profForm.registration_number || null,
-        languages: profForm.languages.length > 0 ? profForm.languages : null
+        languages: profForm.languages.length > 0 ? profForm.languages : null,
+        availability_status: profForm.availability_status
       })
       toast.success('Professional details saved!')
     } catch (err) {
@@ -178,7 +180,7 @@ export default function DoctorProfileEdit() {
       <div className="row g-4">
         {/* Profile Card */}
         <div className="col-lg-4">
-          <div className="card-custom p-4 text-center" style={{ position: 'sticky', top: 88 }}>
+          <div className="card-custom card-static p-4 text-center" style={{ position: 'sticky', top: 88 }}>
             <div className="d-flex justify-content-center mb-3">
               <AvatarUpload
                 currentUrl={personalForm.avatar_url}
@@ -189,9 +191,11 @@ export default function DoctorProfileEdit() {
                 uploading={uploading}
               />
             </div>
-            <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 4 }}>
-              Dr. {personalForm.name || 'Doctor'}
-            </h5>
+            <div className="profile-card-info">
+              <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 4 }}>
+                Dr. {personalForm.name || 'Doctor'}
+              </h5>
+            </div>
             <p style={{ color: 'var(--primary)', fontWeight: 600, fontSize: 14, margin: '4px 0' }}>
               {profForm.specialization || 'Specialist'}
             </p>
@@ -201,23 +205,31 @@ export default function DoctorProfileEdit() {
               </p>
             )}
 
+            {/* Availability Status Badge */}
+            <div className="mt-2 mb-1">
+              <span className={`doctor-status-badge status-${profForm.availability_status.toLowerCase().replace('_', '-')}`}>
+                <i className={`bi ${profForm.availability_status === 'AVAILABLE' ? 'bi-circle-fill' : profForm.availability_status === 'OFFLINE' ? 'bi-moon-fill' : profForm.availability_status === 'UNAVAILABLE' ? 'bi-dash-circle-fill' : 'bi-x-circle-fill'}`} style={{ fontSize: 8 }} />
+                {profForm.availability_status === 'AVAILABLE' ? 'Available' : profForm.availability_status === 'OFFLINE' ? 'Offline' : profForm.availability_status === 'UNAVAILABLE' ? 'Unavailable' : 'Not in Service'}
+              </span>
+            </div>
+
             <hr className="divider" />
 
-            <div className="d-flex flex-column gap-2 text-start">
+            <div className="d-flex flex-column gap-2 text-start profile-card-info">
               <div className="d-flex align-items-center gap-2">
-                <i className="bi bi-envelope" style={{ color: 'var(--gray-400)', width: 20 }} />
-                <span style={{ fontSize: 14, color: 'var(--gray-600)' }}>{authProfile?.email ?? user?.email}</span>
+                <i className="bi bi-envelope" style={{ color: 'var(--gray-400)', width: 20, flexShrink: 0 }} />
+                <span className="profile-contact-text">{authProfile?.email ?? user?.email}</span>
               </div>
               <div className="d-flex align-items-center gap-2">
-                <i className="bi bi-telephone" style={{ color: 'var(--gray-400)', width: 20 }} />
-                <span style={{ fontSize: 14, color: 'var(--gray-600)' }}>{personalForm.phone || '—'}</span>
+                <i className="bi bi-telephone" style={{ color: 'var(--gray-400)', width: 20, flexShrink: 0 }} />
+                <span className="profile-contact-text">{personalForm.phone || '—'}</span>
               </div>
               <div className="d-flex align-items-center gap-2">
-                <i className="bi bi-briefcase" style={{ color: 'var(--gray-400)', width: 20 }} />
-                <span style={{ fontSize: 14, color: 'var(--gray-600)' }}>{profForm.experience_years} years exp.</span>
+                <i className="bi bi-briefcase" style={{ color: 'var(--gray-400)', width: 20, flexShrink: 0 }} />
+                <span className="profile-contact-text">{profForm.experience_years} years exp.</span>
               </div>
               <div className="d-flex align-items-center gap-2">
-                <i className="bi bi-currency-rupee" style={{ color: 'var(--gray-400)', width: 20 }} />
+                <i className="bi bi-currency-rupee" style={{ color: 'var(--gray-400)', width: 20, flexShrink: 0 }} />
                 <span style={{ fontSize: 14, color: 'var(--primary)', fontWeight: 600 }}>₹{profForm.consultation_fee}</span>
               </div>
               {profForm.registration_number && (
@@ -329,6 +341,33 @@ export default function DoctorProfileEdit() {
                 Professional Details
               </h6>
               <form onSubmit={handleSaveProfessional}>
+                {/* Status Selector */}
+                <div className="doctor-status-selector mb-4">
+                  <label className="form-label-custom">Availability Status</label>
+                  <p style={{ fontSize: 12, color: 'var(--gray-400)', marginBottom: 10 }}>
+                    This status is visible to patients on your profile and search results
+                  </p>
+                  <div className="d-flex flex-wrap gap-2">
+                    {[
+                      { value: 'AVAILABLE', label: 'Available', icon: 'bi-circle-fill', color: 'var(--success)' },
+                      { value: 'OFFLINE', label: 'Offline', icon: 'bi-moon-fill', color: 'var(--gray-400)' },
+                      { value: 'UNAVAILABLE', label: 'Unavailable', icon: 'bi-dash-circle-fill', color: 'var(--warning)' },
+                      { value: 'NOT_IN_SERVICE', label: 'Not in Service', icon: 'bi-x-circle-fill', color: 'var(--danger)' }
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`doctor-status-option ${profForm.availability_status === opt.value ? 'active' : ''}`}
+                        style={{ '--status-color': opt.color }}
+                        onClick={() => setProfForm(prev => ({ ...prev, availability_status: opt.value }))}
+                      >
+                        <i className={`bi ${opt.icon}`} style={{ color: opt.color, fontSize: 10 }} />
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="row g-3">
                   <div className="col-md-6">
                     <label className="form-label-custom">Specialization *</label>

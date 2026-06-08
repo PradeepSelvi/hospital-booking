@@ -97,7 +97,7 @@ export async function updateDoctorDetails(doctorId, details) {
   const allowed = [
     'specialization', 'qualification', 'experience_years',
     'consultation_fee', 'department_id', 'bio', 'photo_url',
-    'languages', 'registration_number'
+    'languages', 'registration_number', 'availability_status'
   ]
   const safeUpdates = {}
   for (const key of allowed) {

@@ -179,7 +179,7 @@ export default function PatientProfile() {
         <div className="row g-4">
           {/* ── Left Column: Profile Card ── */}
           <div className="col-lg-4">
-            <div className="card-custom p-4 text-center" style={{ position: 'sticky', top: 88 }}>
+            <div className="card-custom card-static p-4 text-center" style={{ position: 'sticky', top: 88 }}>
               {/* Avatar */}
               <div className="d-flex justify-content-center mb-3">
                 <AvatarUpload
@@ -192,26 +192,28 @@ export default function PatientProfile() {
                 />
               </div>
 
-              <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 4 }}>
-                {profileData.name || 'Patient'}
-              </h5>
+              <div className="profile-card-info">
+                <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 4 }}>
+                  {profileData.name || 'Patient'}
+                </h5>
+              </div>
               <span className="badge-confirmed" style={{ fontSize: 11 }}>Patient</span>
 
               <hr className="divider" />
 
               {/* Contact Info */}
-              <div className="d-flex flex-column gap-2 text-start">
+              <div className="d-flex flex-column gap-2 text-start profile-card-info">
                 <div className="d-flex align-items-center gap-2">
-                  <i className="bi bi-envelope" style={{ color: 'var(--gray-400)', width: 20 }} />
-                  <span style={{ fontSize: 14, color: 'var(--gray-600)' }}>{user?.email}</span>
+                  <i className="bi bi-envelope" style={{ color: 'var(--gray-400)', width: 20, flexShrink: 0 }} />
+                  <span className="profile-contact-text">{user?.email}</span>
                 </div>
                 <div className="d-flex align-items-center gap-2">
-                  <i className="bi bi-telephone" style={{ color: 'var(--gray-400)', width: 20 }} />
-                  <span style={{ fontSize: 14, color: 'var(--gray-600)' }}>{profileData.phone || '—'}</span>
+                  <i className="bi bi-telephone" style={{ color: 'var(--gray-400)', width: 20, flexShrink: 0 }} />
+                  <span className="profile-contact-text">{profileData.phone || '—'}</span>
                 </div>
                 <div className="d-flex align-items-center gap-2">
-                  <i className="bi bi-calendar3" style={{ color: 'var(--gray-400)', width: 20 }} />
-                  <span style={{ fontSize: 14, color: 'var(--gray-600)' }}>
+                  <i className="bi bi-calendar3" style={{ color: 'var(--gray-400)', width: 20, flexShrink: 0 }} />
+                  <span className="profile-contact-text">
                     Joined {authProfile?.created_at
                       ? new Date(authProfile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
                       : '—'

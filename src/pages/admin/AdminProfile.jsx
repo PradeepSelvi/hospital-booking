@@ -105,7 +105,7 @@ export default function AdminProfile() {
       <div className="row g-4">
         {/* Profile Card */}
         <div className="col-lg-4">
-          <div className="card-custom p-4 text-center">
+          <div className="card-custom card-static p-4 text-center">
             <div className="d-flex justify-content-center mb-3">
               <AvatarUpload
                 currentUrl={profileData.avatar_url}
@@ -116,9 +116,11 @@ export default function AdminProfile() {
                 uploading={uploading}
               />
             </div>
-            <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 4 }}>
-              {profileData.name || 'Administrator'}
-            </h5>
+            <div className="profile-card-info">
+              <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 4 }}>
+                {profileData.name || 'Administrator'}
+              </h5>
+            </div>
             <span style={{
               background: 'rgba(3,4,94,0.1)', color: 'var(--dark)',
               padding: '4px 12px', borderRadius: 'var(--radius-full)',
@@ -129,18 +131,18 @@ export default function AdminProfile() {
 
             <hr className="divider" />
 
-            <div className="d-flex flex-column gap-2 text-start">
+            <div className="d-flex flex-column gap-2 text-start profile-card-info">
               <div className="d-flex align-items-center gap-2">
-                <i className="bi bi-envelope" style={{ color: 'var(--gray-400)', width: 20 }} />
-                <span style={{ fontSize: 14, color: 'var(--gray-600)' }}>{user?.email}</span>
+                <i className="bi bi-envelope" style={{ color: 'var(--gray-400)', width: 20, flexShrink: 0 }} />
+                <span className="profile-contact-text">{user?.email}</span>
               </div>
               <div className="d-flex align-items-center gap-2">
-                <i className="bi bi-telephone" style={{ color: 'var(--gray-400)', width: 20 }} />
-                <span style={{ fontSize: 14, color: 'var(--gray-600)' }}>{profileData.phone || '—'}</span>
+                <i className="bi bi-telephone" style={{ color: 'var(--gray-400)', width: 20, flexShrink: 0 }} />
+                <span className="profile-contact-text">{profileData.phone || '—'}</span>
               </div>
               <div className="d-flex align-items-center gap-2">
-                <i className="bi bi-calendar3" style={{ color: 'var(--gray-400)', width: 20 }} />
-                <span style={{ fontSize: 14, color: 'var(--gray-600)' }}>
+                <i className="bi bi-calendar3" style={{ color: 'var(--gray-400)', width: 20, flexShrink: 0 }} />
+                <span className="profile-contact-text">
                   Joined {authProfile?.created_at
                     ? new Date(authProfile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
                     : '—'
