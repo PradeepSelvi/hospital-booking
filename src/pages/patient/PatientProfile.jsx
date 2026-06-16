@@ -11,7 +11,7 @@ import Footer from '../../components/Footer'
 import AvatarUpload from '../../components/AvatarUpload'
 import PasswordChange from '../../components/PasswordChange'
 import ProfileTabs from '../../components/ProfileTabs'
-import LoadingSpinner from '../../components/LoadingSpinner'
+import { SkeletonProfilePage } from '../../components/SkeletonLoader'
 import { validateField, validatePhone, RULES } from '../../security/validators'
 import { sanitizeFormData } from '../../security/sanitize'
 
@@ -175,7 +175,14 @@ export default function PatientProfile() {
     }
   }
 
-  if (loading) return <LoadingSpinner fullPage text="Loading your profile..." />
+  if (loading) return (
+    <div>
+      <Navbar />
+      <div className="page-header"><div className="container"><div className="skeleton skeleton-heading" style={{ background: 'rgba(255,255,255,0.15)' }} /></div></div>
+      <div className="container py-5"><SkeletonProfilePage /></div>
+      <Footer />
+    </div>
+  )
 
   return (
     <div>

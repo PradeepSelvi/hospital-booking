@@ -5,7 +5,7 @@ import { useNotifications } from '../context/NotificationContext'
 import { getNotifications, getNotificationIcon, getNotificationColor, timeAgo } from '../services/notifications'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import LoadingSpinner from '../components/LoadingSpinner'
+import { SkeletonNotifications } from '../components/SkeletonLoader'
 
 export default function NotificationCenter() {
   const { user } = useAuth()
@@ -118,7 +118,7 @@ export default function NotificationCenter() {
 
         {/* Notification List */}
         {loading && notifications.length === 0 ? (
-          <LoadingSpinner text="Loading notifications..." />
+          <SkeletonNotifications count={6} />
         ) : notifications.length === 0 ? (
           <div className="empty-state">
             <i className="bi bi-bell-slash" />

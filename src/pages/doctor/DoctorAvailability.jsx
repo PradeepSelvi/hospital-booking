@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getDoctorByUserId, getDoctorAvailability, setDoctorAvailability } from '../../services/doctors'
 import { useAuth } from '../../context/AuthContext'
 import { toast } from 'react-toastify'
-import LoadingSpinner from '../../components/LoadingSpinner'
+import { SkeletonSchedule } from '../../components/SkeletonLoader'
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 const DAY_LABELS = { MON: 'Monday', TUE: 'Tuesday', WED: 'Wednesday', THU: 'Thursday', FRI: 'Friday', SAT: 'Saturday', SUN: 'Sunday' }
@@ -94,7 +94,7 @@ export default function DoctorAvailability() {
     }
   }
 
-  if (loading) return <LoadingSpinner text="Loading schedule..." />
+  if (loading) return <SkeletonSchedule />
 
   return (
     <div>

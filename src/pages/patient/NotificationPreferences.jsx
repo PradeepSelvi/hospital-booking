@@ -5,7 +5,7 @@ import { saveWhatsAppPreference, verifyWhatsAppNumber, confirmWhatsAppVerificati
 import { toast } from 'react-toastify'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
-import LoadingSpinner from '../../components/LoadingSpinner'
+
 
 export default function NotificationPreferences() {
   const { user } = useAuth()
@@ -87,7 +87,42 @@ export default function NotificationPreferences() {
     setPrefs(prev => ({ ...prev, [key]: value }))
   }
 
-  if (loading) return <LoadingSpinner fullPage text="Loading preferences..." />
+  if (loading) return (
+    <div>
+      <Navbar />
+      <div className="page-header"><div className="container"><div className="skeleton skeleton-heading" style={{ background: 'rgba(255,255,255,0.15)' }} /></div></div>
+      <div className="container py-5" style={{ maxWidth: 720 }}>
+        <div className="card-custom p-4 mb-4">
+          <div className="skeleton skeleton-heading" style={{ width: '50%', marginBottom: 20 }} />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i}>
+              <div className="d-flex align-items-center gap-3 py-2">
+                <div className="skeleton" style={{ width: 40, height: 40, borderRadius: 'var(--radius-md)', flexShrink: 0 }} />
+                <div style={{ flex: 1 }}><div className="skeleton skeleton-text medium" /><div className="skeleton skeleton-text short" /></div>
+                <div className="skeleton" style={{ width: 48, height: 26, borderRadius: 13 }} />
+              </div>
+              {i < 2 && <hr style={{ border: 'none', borderTop: '1px solid var(--gray-100)', margin: '8px 0' }} />}
+            </div>
+          ))}
+        </div>
+        <div className="card-custom p-4 mb-4">
+          <div className="skeleton skeleton-heading" style={{ width: '40%', marginBottom: 20 }} />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i}>
+              <div className="d-flex align-items-center gap-3 py-2">
+                <div className="skeleton" style={{ width: 40, height: 40, borderRadius: 'var(--radius-md)', flexShrink: 0 }} />
+                <div style={{ flex: 1 }}><div className="skeleton skeleton-text medium" /><div className="skeleton skeleton-text short" /></div>
+                <div className="skeleton" style={{ width: 48, height: 26, borderRadius: 13 }} />
+              </div>
+              {i < 3 && <hr style={{ border: 'none', borderTop: '1px solid var(--gray-100)', margin: '8px 0' }} />}
+            </div>
+          ))}
+        </div>
+        <div className="skeleton" style={{ height: 52, borderRadius: 'var(--radius-full)' }} />
+      </div>
+      <Footer />
+    </div>
+  )
 
   return (
     <div>

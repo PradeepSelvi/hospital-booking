@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getWhatsAppStatus, getWhatsAppStats, getWhatsAppLogs, sendTestWhatsApp } from '../../services/whatsapp'
 import { toast } from 'react-toastify'
-import LoadingSpinner from '../../components/LoadingSpinner'
+import { SkeletonWhatsApp } from '../../components/SkeletonLoader'
 
 export default function AdminWhatsAppPanel() {
   const [status, setStatus] = useState({ connected: false, sessionId: null, error: null })
@@ -51,7 +51,7 @@ export default function AdminWhatsAppPanel() {
     }
   }
 
-  if (loading) return <LoadingSpinner text="Loading WhatsApp panel..." />
+  if (loading) return <SkeletonWhatsApp />
 
   return (
     <div style={{ padding: '32px 24px' }}>

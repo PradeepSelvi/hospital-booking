@@ -6,7 +6,7 @@ import { toast } from 'react-toastify'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import StatusBadge from '../../components/StatusBadge'
-import LoadingSpinner from '../../components/LoadingSpinner'
+import { SkeletonAppointmentCards } from '../../components/SkeletonLoader'
 
 export default function MyAppointments() {
   const { user } = useAuth()
@@ -111,7 +111,7 @@ export default function MyAppointments() {
         </div>
 
         {loading ? (
-          <LoadingSpinner text="Loading appointments..." />
+          <SkeletonAppointmentCards count={6} />
         ) : filtered.length === 0 ? (
           <div className="empty-state">
             <i className="bi bi-calendar-x" />

@@ -7,7 +7,7 @@ import { toast } from 'react-toastify'
 import AvatarUpload from '../../components/AvatarUpload'
 import PasswordChange from '../../components/PasswordChange'
 import ProfileTabs from '../../components/ProfileTabs'
-import LoadingSpinner from '../../components/LoadingSpinner'
+import { SkeletonProfilePage } from '../../components/SkeletonLoader'
 import { validateField, validatePhone, RULES } from '../../security/validators'
 
 export default function DoctorProfileEdit() {
@@ -200,7 +200,7 @@ export default function DoctorProfileEdit() {
     }))
   }
 
-  if (loading) return <LoadingSpinner text="Loading profile..." />
+  if (loading) return <SkeletonProfilePage />
 
   return (
     <div>

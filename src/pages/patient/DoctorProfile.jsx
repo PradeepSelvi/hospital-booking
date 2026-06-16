@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { toast } from 'react-toastify'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
-import LoadingSpinner from '../../components/LoadingSpinner'
+import { SkeletonDoctorProfile } from '../../components/SkeletonLoader'
 
 export default function DoctorProfile() {
   const { id } = useParams()
@@ -98,7 +98,13 @@ export default function DoctorProfile() {
     return dates
   }
 
-  if (loading) return <LoadingSpinner fullPage text="Loading doctor profile..." />
+  if (loading) return (
+    <div>
+      <Navbar />
+      <SkeletonDoctorProfile />
+      <Footer />
+    </div>
+  )
 
   if (!doctor) return null
 
@@ -237,7 +243,7 @@ export default function DoctorProfile() {
                 <>
                   <label className="form-label-custom">Available Time Slots</label>
                   {slotsLoading ? (
-                    <LoadingSpinner text="Loading slots..." />
+                    <div className="d-flex flex-wrap gap-2">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton" style={{ width: 100, height: 36, borderRadius: 'var(--radius-md)' }} />)}</div>
                   ) : slots.length === 0 ? (
                     <div className="alert-custom alert-warning mb-4">
                       <i className="bi bi-exclamation-triangle" />

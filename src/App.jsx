@@ -6,7 +6,7 @@ import { DeviceProvider } from './context/DeviceContext'
 import { ToastContainer } from 'react-toastify'
 import ProtectedRoute from './routes/ProtectedRoute'
 import ErrorBoundary from './components/ErrorBoundary'
-import LoadingSpinner from './components/LoadingSpinner'
+import { SkeletonDashboard } from './components/SkeletonLoader'
 import ScrollToTop from './components/ScrollToTop'
 
 // ── Lazy-loaded Pages (route-based code splitting) ──
@@ -55,7 +55,7 @@ export default function App() {
             <ErrorBoundary>
               <ScrollToTop />
               <main id="main-content">
-              <Suspense fallback={<LoadingSpinner fullPage text="Loading..." />}>
+              <Suspense fallback={<SkeletonDashboard />}>
                 <Routes>
                   {/* ── Public Routes ── */}
                   <Route path="/" element={<LandingPage />} />

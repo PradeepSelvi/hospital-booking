@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getAppointmentReport } from '../../services/admin'
 import { getDoctors } from '../../services/doctors'
 import { toast } from 'react-toastify'
-import LoadingSpinner from '../../components/LoadingSpinner'
+import { SkeletonReports } from '../../components/SkeletonLoader'
 import { Doughnut, Bar } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend } from 'chart.js'
 
@@ -127,7 +127,7 @@ export default function Reports() {
     }
   }
 
-  if (loading) return <LoadingSpinner text="Generating report..." />
+  if (loading) return <SkeletonReports />
 
   return (
     <div>

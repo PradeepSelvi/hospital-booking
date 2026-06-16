@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { getAllAppointments, cancelAppointment } from '../../services/appointments'
 import { toast } from 'react-toastify'
 import StatusBadge from '../../components/StatusBadge'
-import LoadingSpinner from '../../components/LoadingSpinner'
+import { SkeletonTable } from '../../components/SkeletonLoader'
 
 export default function AdminAppointments() {
   const [appointments, setAppointments] = useState([])
@@ -47,7 +47,14 @@ export default function AdminAppointments() {
     return true
   })
 
-  if (loading) return <LoadingSpinner text="Loading appointments..." />
+  if (loading) return (
+    <div>
+      <div className="skeleton skeleton-heading" style={{ marginBottom: 'var(--space-4)' }} />
+      <div className="skeleton skeleton-text short" style={{ marginBottom: 'var(--space-5)' }} />
+      <div className="skeleton" style={{ height: 52, borderRadius: 'var(--card-radius)', marginBottom: 'var(--space-4)' }} />
+      <SkeletonTable rows={6} cols={7} />
+    </div>
+  )
 
   return (
     <div>

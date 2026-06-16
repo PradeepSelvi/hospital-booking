@@ -3,7 +3,7 @@ import { getAllPatients } from '../../services/admin'
 import { getPatientAppointments } from '../../services/appointments'
 import { toast } from 'react-toastify'
 import StatusBadge from '../../components/StatusBadge'
-import LoadingSpinner from '../../components/LoadingSpinner'
+import { SkeletonTable } from '../../components/SkeletonLoader'
 
 export default function ManagePatients() {
   const [patients, setPatients] = useState([])
@@ -49,7 +49,14 @@ export default function ManagePatients() {
     return name.includes(search.toLowerCase()) || email.includes(search.toLowerCase())
   })
 
-  if (loading) return <LoadingSpinner text="Loading patients..." />
+  if (loading) return (
+    <div>
+      <div className="skeleton skeleton-heading" style={{ marginBottom: 'var(--space-4)' }} />
+      <div className="skeleton skeleton-text short" style={{ marginBottom: 'var(--space-5)' }} />
+      <div className="skeleton" style={{ height: 52, borderRadius: 'var(--card-radius)', marginBottom: 'var(--space-4)' }} />
+      <SkeletonTable rows={6} cols={5} />
+    </div>
+  )
 
   return (
     <div>
@@ -174,7 +181,7 @@ export default function ManagePatients() {
               Appointment History
             </h6>
             {aptsLoading ? (
-              <LoadingSpinner text="Loading..." />
+              <SkeletonTable rows={3} cols={3} />
             ) : patientApts.length === 0 ? (
               <p style={{ fontSize: 14, color: 'var(--gray-400)' }}>No appointments found</p>
             ) : (

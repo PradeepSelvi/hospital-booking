@@ -6,7 +6,7 @@ import { toast } from 'react-toastify'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import StatusBadge from '../../components/StatusBadge'
-import LoadingSpinner from '../../components/LoadingSpinner'
+import { SkeletonKPI, SkeletonTable } from '../../components/SkeletonLoader'
 
 export default function PatientDashboard() {
   const { user, profile } = useAuth()
@@ -34,7 +34,21 @@ export default function PatientDashboard() {
   const completed = appointments.filter(a => a.status === 'COMPLETED')
   const nextAppointment = upcoming[0]
 
-  if (loading) return <LoadingSpinner fullPage text="Loading dashboard..." />
+  if (loading) return (
+    <div>
+      <Navbar />
+      <div className="page-header"><div className="container"><div className="skeleton skeleton-heading" style={{ background: 'rgba(255,255,255,0.15)', marginBottom: 8 }} /><div className="skeleton skeleton-text short" style={{ background: 'rgba(255,255,255,0.1)' }} /></div></div>
+      <div className="container py-5">
+        <SkeletonKPI count={3} />
+        <div className="row g-4 mt-3">
+          <div className="col-lg-6"><div className="skeleton" style={{ height: 200, borderRadius: 'var(--card-radius)' }} /></div>
+          <div className="col-lg-6"><div className="skeleton" style={{ height: 200, borderRadius: 'var(--card-radius)' }} /></div>
+        </div>
+        <div className="mt-4"><SkeletonTable rows={4} cols={4} /></div>
+      </div>
+      <Footer />
+    </div>
+  )
 
   return (
     <div>

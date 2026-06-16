@@ -3,7 +3,7 @@ import { getDoctors } from '../../services/doctors'
 import { getDepartments, deactivateDoctor, activateDoctor } from '../../services/admin'
 import { supabase } from '../../lib/supabase'
 import { toast } from 'react-toastify'
-import LoadingSpinner from '../../components/LoadingSpinner'
+import { SkeletonTable } from '../../components/SkeletonLoader'
 import { validateField, validatePhone, getPasswordStrength, RULES } from '../../security/validators'
 import { sanitizeFormData, sanitizeName, sanitizePhone, sanitizeEmail } from '../../security/sanitize'
 
@@ -209,7 +209,19 @@ export default function ManageDoctors() {
 
   const strength = getPasswordStrength(form.password)
 
-  if (loading) return <LoadingSpinner text="Loading doctors..." />
+  if (loading) return (
+    <div>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <div className="skeleton skeleton-heading" style={{ marginBottom: 'var(--space-2)' }} />
+          <div className="skeleton skeleton-text short" />
+        </div>
+        <div className="skeleton" style={{ width: 140, height: 44, borderRadius: 'var(--radius-full)' }} />
+      </div>
+      <div className="skeleton" style={{ height: 52, borderRadius: 'var(--card-radius)', marginBottom: 'var(--space-4)' }} />
+      <SkeletonTable rows={6} cols={7} />
+    </div>
+  )
 
   return (
     <div>
