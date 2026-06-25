@@ -1,7 +1,12 @@
 // chatService.js
 // Calls the NVIDIA NIM API directly from the browser using the VITE_NVIDIA_API_KEY env variable.
+// ⚠️ NOTE: For production, move the API key to a backend proxy to avoid client-side exposure.
 
-const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions'
+// In development, use Vite's proxy to avoid CORS (browser → localhost → NVIDIA).
+// In production, this should point to your own backend proxy.
+const NVIDIA_API_URL = import.meta.env.DEV
+  ? '/api/nvidia/v1/chat/completions'
+  : 'https://integrate.api.nvidia.com/v1/chat/completions'
 const MODEL = 'nvidia/nemotron-3-ultra-550b-a55b'
 
 // System prompt to give the assistant relevant context about the app
@@ -22,8 +27,9 @@ Do NOT provide specific diagnoses. If in doubt, always advise the user to visit 
  * Sends messages directly to the NVIDIA NIM API with streaming
  * @param {Array} messages - Array of { role: 'user' | 'assistant', content: string }
  * @param {Function} onChunk - Callback({ text: string, reasoning: string })
+ * @param {AbortSignal} [signal] - Optional AbortController signal to cancel the request
  */
-export async function streamChatCompletion(messages, onChunk) {
+export async function streamChatCompletion(messages, onChunk, signal) {
   const apiKey = import.meta.env.VITE_NVIDIA_API_KEY
 
   if (!apiKey) {
@@ -32,6 +38,7 @@ export async function streamChatCompletion(messages, onChunk) {
 
   const response = await fetch(NVIDIA_API_URL, {
     method: 'POST',
+    signal,
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
@@ -41,53 +48,87 @@ export async function streamChatCompletion(messages, onChunk) {
       messages: [SYSTEM_PROMPT, ...messages],
       temperature: 0.7,
       top_p: 0.95,
-      max_tokens: 1024,
+      max_tokens: 4096,
       stream: true,
-      extra_body: {
-        chat_template_kwargs: { enable_thinking: true },
-        reasoning_budget: 512,
-      },
+      // These fields must be top-level — `extra_body` is an OpenAI Python SDK concept,
+      // not a raw API field. The SDK merges extra_body contents into the request body.
+      // When using raw fetch, place them directly at the top level.
+      chat_template_kwargs: { enable_thinking: true },
+      reasoning_budget: 4096,
     }),
   })
 
   if (!response.ok) {
     const errText = await response.text()
-    console.error('NVIDIA API error:', response.status, errText)
-    throw new Error(`NVIDIA API error ${response.status}: ${errText}`)
+    // Log safely — avoid leaking full error details in production
+    if (import.meta.env.DEV) {
+      console.error('NVIDIA API error:', response.status, errText)
+    }
+    throw new Error(`AI service error (${response.status}). Please try again later.`)
   }
 
-  // Parse SSE streaming response
+  // Parse SSE streaming response with proper buffering for partial chunks
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
+  let buffer = ''
   let currentText = ''
   let currentReasoning = ''
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
 
-    const chunk = decoder.decode(value, { stream: true })
-    const lines = chunk.split('\n')
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      // Keep the last (potentially incomplete) line in the buffer
+      buffer = lines.pop() || ''
 
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (!trimmed.startsWith('data: ') || trimmed === 'data: [DONE]') continue
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed.startsWith('data: ') || trimmed === 'data: [DONE]') continue
 
-      try {
-        const data = JSON.parse(trimmed.slice(6))
-        const delta = data.choices?.[0]?.delta || {}
+        try {
+          const data = JSON.parse(trimmed.slice(6))
+          const delta = data.choices?.[0]?.delta || {}
 
-        if (delta.reasoning_content) {
-          currentReasoning += delta.reasoning_content
-          onChunk({ text: currentText, reasoning: currentReasoning })
+          if (delta.reasoning_content) {
+            currentReasoning += delta.reasoning_content
+            onChunk({ text: currentText, reasoning: currentReasoning })
+          }
+          if (delta.content) {
+            currentText += delta.content
+            onChunk({ text: currentText, reasoning: currentReasoning })
+          }
+        } catch {
+          // Ignore genuinely malformed JSON lines
         }
-        if (delta.content) {
-          currentText += delta.content
-          onChunk({ text: currentText, reasoning: currentReasoning })
-        }
-      } catch {
-        // Ignore partial chunk parse errors
       }
     }
+
+    // Flush any remaining bytes from the decoder
+    const remaining = decoder.decode()
+    if (remaining) {
+      buffer += remaining
+      const trimmed = buffer.trim()
+      if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
+        try {
+          const data = JSON.parse(trimmed.slice(6))
+          const delta = data.choices?.[0]?.delta || {}
+          if (delta.reasoning_content) {
+            currentReasoning += delta.reasoning_content
+            onChunk({ text: currentText, reasoning: currentReasoning })
+          }
+          if (delta.content) {
+            currentText += delta.content
+            onChunk({ text: currentText, reasoning: currentReasoning })
+          }
+        } catch {
+          // Ignore
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
   }
 }
