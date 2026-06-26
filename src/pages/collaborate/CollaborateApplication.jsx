@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
-import { submitApplication, checkEmailExists, uploadApplicationDocument } from '../../services/collaborate'
+import { submitApplication, checkEmailExists, uploadApplicationDocument, uploadApplicationPhoto, getPhotoPublicUrl, validateFile, FILE_CONSTRAINTS } from '../../services/collaborate'
 import { getDepartments } from '../../services/admin'
 import { sanitizeName, sanitizeEmail, sanitizePhone, sanitizeInput } from '../../security/sanitize'
 import { validateField, validatePhone, RULES } from '../../security/validators'
@@ -47,6 +47,10 @@ export default function CollaborateApplication() {
   const [submitted, setSubmitted] = useState(false)
   const [appId, setAppId] = useState(null)
   const [documentFile, setDocumentFile] = useState(null)
+  const [photoFile, setPhotoFile] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState(null)
+  const [fileErrors, setFileErrors] = useState({})
+  const photoInputRef = useRef(null)
 
   useEffect(() => {
     getDepartments().then(setDepartments).catch(() => {})
@@ -94,11 +98,73 @@ export default function CollaborateApplication() {
       }
     }
 
-    // Step 3 (additional) — no mandatory fields
+    if (stepIndex === 3) {
+      // Photo is mandatory for DOCTOR applications
+      if (form.application_type === 'DOCTOR' && !photoFile) {
+        errs.photo = 'Doctor photo is mandatory. Please upload a professional photo.'
+      }
+      // Validate document file if selected
+      if (documentFile) {
+        const docValidation = validateFile(documentFile, 'document')
+        if (!docValidation.valid) errs.document = docValidation.error
+      }
+      // Validate photo file if selected
+      if (photoFile) {
+        const photoValidation = validateFile(photoFile, 'photo')
+        if (!photoValidation.valid) errs.photo = photoValidation.error
+      }
+    }
     // Step 4 (review) — no validation needed
 
     setErrors(errs)
     return Object.keys(errs).length === 0
+  }
+
+  // ── Photo handling ──
+  function handlePhotoSelect(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate immediately
+    const validation = validateFile(file, 'photo')
+    if (!validation.valid) {
+      setFileErrors(prev => ({ ...prev, photo: validation.error }))
+      toast.error(validation.error)
+      e.target.value = ''
+      return
+    }
+
+    setFileErrors(prev => { const n = { ...prev }; delete n.photo; return n })
+    setErrors(prev => { const n = { ...prev }; delete n.photo; return n })
+    setPhotoFile(file)
+
+    // Generate preview
+    const reader = new FileReader()
+    reader.onload = (ev) => setPhotoPreview(ev.target.result)
+    reader.readAsDataURL(file)
+  }
+
+  function removePhoto() {
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    if (photoInputRef.current) photoInputRef.current.value = ''
+  }
+
+  // ── Document handling with validation ──
+  function handleDocumentSelect(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const validation = validateFile(file, 'document')
+    if (!validation.valid) {
+      setFileErrors(prev => ({ ...prev, document: validation.error }))
+      toast.error(validation.error)
+      e.target.value = ''
+      return
+    }
+
+    setFileErrors(prev => { const n = { ...prev }; delete n.document; return n })
+    setDocumentFile(file)
   }
 
   async function handleNext() {
@@ -136,6 +202,12 @@ export default function CollaborateApplication() {
         documentsUrl = await uploadApplicationDocument(documentFile, form.applicant_email)
       }
 
+      // Upload photo if provided
+      let photoUrl = null
+      if (photoFile) {
+        photoUrl = await uploadApplicationPhoto(photoFile, form.applicant_email)
+      }
+
       const payload = {
         ...form,
         applicant_name: sanitizeName(form.applicant_name),
@@ -155,6 +227,7 @@ export default function CollaborateApplication() {
         bed_count: form.bed_count ? parseInt(form.bed_count) : null,
         department_id: form.department_id || null,
         documents_url: documentsUrl,
+        photo_url: photoUrl,
       }
 
       const result = await submitApplication(payload)
@@ -198,8 +271,24 @@ export default function CollaborateApplication() {
                 You will receive your login credentials via email once your application
                 is approved. This usually takes 1-3 business days.
               </p>
-              <div className="d-flex gap-3 justify-content-center mt-4">
-                <Link to="/" className="btn-primary-custom">
+
+              {/* Important: save your application ID */}
+              <div style={{
+                background: 'rgba(0,119,182,0.06)', borderRadius: 'var(--radius-md, 10px)',
+                padding: '14px 18px', fontSize: 13, color: 'var(--gray-600)',
+                lineHeight: 1.7, marginTop: 16, textAlign: 'left'
+              }}>
+                <i className="bi bi-info-circle me-2" style={{ color: 'var(--primary)' }} />
+                <strong>Save your Application ID</strong> — You'll need it to check the status of your application.
+                Use your registered email and this ID on the
+                <Link to="/collaborate/status" style={{ fontWeight: 700, marginLeft: 4 }}>Application Status</Link> page.
+              </div>
+
+              <div className="d-flex gap-3 justify-content-center mt-4 flex-wrap">
+                <Link to="/collaborate/status" className="btn-primary-custom">
+                  <i className="bi bi-search me-2" />Check Status
+                </Link>
+                <Link to="/" className="btn-outline-custom">
                   <i className="bi bi-house me-2" />Back to Home
                 </Link>
                 <Link to="/doctors" className="btn-outline-custom">
@@ -571,6 +660,63 @@ export default function CollaborateApplication() {
               </p>
 
               <div className="row g-3">
+                {/* ── Mandatory Photo Upload (for Doctors) ── */}
+                {form.application_type === 'DOCTOR' && (
+                  <div className="col-12">
+                    <label className="form-label-custom required">
+                      <i className="bi bi-camera me-1" />Professional Photo
+                    </label>
+                    <p style={{ fontSize: 12, color: 'var(--gray-400)', margin: '0 0 8px' }}>
+                      Upload a professional photo ({FILE_CONSTRAINTS.photo.label} — max {FILE_CONSTRAINTS.photo.maxSizeLabel}, min {FILE_CONSTRAINTS.photo.minWidth}×{FILE_CONSTRAINTS.photo.minHeight}px)
+                    </p>
+
+                    <div className="photo-upload-area">
+                      {photoPreview ? (
+                        <div className="photo-preview-container">
+                          <img src={photoPreview} alt="Photo preview" className="photo-preview-img" />
+                          <div className="photo-preview-info">
+                            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--dark)' }}>{photoFile?.name}</span>
+                            <span style={{ fontSize: 12, color: 'var(--gray-400)' }}>
+                              {photoFile && `${(photoFile.size / 1024).toFixed(0)} KB`}
+                            </span>
+                            <button
+                              type="button"
+                              className="btn-ghost"
+                              style={{ padding: '4px 12px', fontSize: 12, color: 'var(--danger)', marginTop: 4 }}
+                              onClick={removePhoto}
+                            >
+                              <i className="bi bi-trash me-1" />Remove
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          className="photo-upload-placeholder"
+                          onClick={() => photoInputRef.current?.click()}
+                        >
+                          <i className="bi bi-person-bounding-box" style={{ fontSize: 36, color: 'var(--gray-300)' }} />
+                          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gray-500)', marginTop: 8 }}>
+                            Click to upload your photo
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--gray-400)' }}>
+                            {FILE_CONSTRAINTS.photo.label} • Max {FILE_CONSTRAINTS.photo.maxSizeLabel}
+                          </span>
+                        </div>
+                      )}
+                      <input
+                        ref={photoInputRef}
+                        type="file"
+                        accept=".jpg,.jpeg,.png,.webp"
+                        onChange={handlePhotoSelect}
+                        style={{ display: 'none' }}
+                      />
+                    </div>
+                    {(errors.photo || fileErrors.photo) && (
+                      <span className="form-error"><i className="bi bi-exclamation-circle" />{errors.photo || fileErrors.photo}</span>
+                    )}
+                  </div>
+                )}
+
                 <div className="col-12">
                   <label className="form-label-custom">
                     {form.application_type === 'DOCTOR' ? 'Professional Bio' : 'About the Hospital'}
@@ -596,13 +742,13 @@ export default function CollaborateApplication() {
                     Supporting Documents
                   </label>
                   <p style={{ fontSize: 12, color: 'var(--gray-400)', margin: '0 0 8px' }}>
-                    Upload your medical license, registration certificate, or hospital license (PDF, JPG, PNG — max 5MB)
+                    Upload your medical license, registration certificate, or hospital license ({FILE_CONSTRAINTS.document.label} — max {FILE_CONSTRAINTS.document.maxSizeLabel})
                   </p>
                   <input
                     type="file"
                     className="form-input-custom"
-                    accept=".pdf,.jpg,.jpeg,.png,.webp"
-                    onChange={e => setDocumentFile(e.target.files?.[0] || null)}
+                    accept={FILE_CONSTRAINTS.document.allowedExtensions.join(',')}
+                    onChange={handleDocumentSelect}
                     style={{ padding: '10px 14px' }}
                   />
                   {documentFile && (
@@ -610,6 +756,9 @@ export default function CollaborateApplication() {
                       <i className="bi bi-file-earmark-check" />
                       {documentFile.name} ({(documentFile.size / 1024).toFixed(0)} KB)
                     </div>
+                  )}
+                  {fileErrors.document && (
+                    <span className="form-error"><i className="bi bi-exclamation-circle" />{fileErrors.document}</span>
                   )}
                 </div>
               </div>
@@ -762,6 +911,26 @@ export default function CollaborateApplication() {
                 </div>
               )}
 
+              {/* Photo Preview */}
+              {photoFile && photoPreview && (
+                <div className="review-section">
+                  <div className="review-section-title">
+                    <i className="bi bi-camera" />Applicant Photo
+                  </div>
+                  <div className="d-flex align-items-center gap-3">
+                    <img
+                      src={photoPreview}
+                      alt="Applicant photo"
+                      style={{ width: 80, height: 80, borderRadius: 'var(--radius-md, 10px)', objectFit: 'cover', border: '2px solid var(--gray-200)' }}
+                    />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--dark)' }}>{photoFile.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--gray-400)' }}>{(photoFile.size / 1024).toFixed(0)} KB</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Document */}
               {documentFile && (
                 <div className="review-section">
@@ -770,7 +939,7 @@ export default function CollaborateApplication() {
                   </div>
                   <div className="d-flex align-items-center gap-2" style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>
                     <i className="bi bi-file-earmark-check" />
-                    {documentFile.name}
+                    {documentFile.name} ({(documentFile.size / 1024).toFixed(0)} KB)
                   </div>
                 </div>
               )}

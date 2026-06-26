@@ -24,6 +24,7 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 
 // Collaborate Pages
 const CollaborateApplication = lazy(() => import('./pages/collaborate/CollaborateApplication'))
+const ApplicationStatus = lazy(() => import('./pages/collaborate/ApplicationStatus'))
 
 // Legal Pages
 const TermsOfService = lazy(() => import('./pages/legal/TermsOfService'))
@@ -93,6 +94,7 @@ export default function App() {
                   <Route path="/doctors" element={<DoctorSearch />} />
                   <Route path="/doctors/:id" element={<DoctorProfile />} />
                   <Route path="/collaborate" element={<CollaborateApplication />} />
+                  <Route path="/collaborate/status" element={<ApplicationStatus />} />
 
                   {/* ── Legal Pages ── */}
                   <Route path="/terms-of-service" element={<TermsOfService />} />

@@ -1,6 +1,77 @@
 import { supabase, createIsolatedClient } from '../lib/supabase'
 
 // ─────────────────────────────────────────────
+// File Validation Constants
+// ─────────────────────────────────────────────
+
+export const FILE_CONSTRAINTS = {
+  document: {
+    maxSize: 5 * 1024 * 1024, // 5MB
+    maxSizeLabel: '5MB',
+    allowedTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+    allowedExtensions: ['.pdf', '.jpg', '.jpeg', '.png', '.webp'],
+    label: 'PDF, JPG, PNG, WebP',
+  },
+  photo: {
+    maxSize: 2 * 1024 * 1024, // 2MB
+    maxSizeLabel: '2MB',
+    allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    allowedExtensions: ['.jpg', '.jpeg', '.png', '.webp'],
+    label: 'JPG, PNG, WebP',
+    minWidth: 200,
+    minHeight: 200,
+  },
+}
+
+/**
+ * Validate a file against size and type constraints.
+ * @returns {{ valid: boolean, error?: string }}
+ */
+export function validateFile(file, type = 'document') {
+  const constraints = FILE_CONSTRAINTS[type]
+  if (!constraints) return { valid: false, error: 'Unknown file type' }
+
+  if (!file) return { valid: false, error: 'No file selected' }
+
+  if (file.size > constraints.maxSize) {
+    return { valid: false, error: `File size must be under ${constraints.maxSizeLabel}. Your file is ${(file.size / (1024 * 1024)).toFixed(1)}MB.` }
+  }
+
+  if (!constraints.allowedTypes.includes(file.type)) {
+    return { valid: false, error: `Invalid file format. Allowed: ${constraints.label}` }
+  }
+
+  return { valid: true }
+}
+
+/**
+ * Validate image dimensions (returns a Promise).
+ * @returns {Promise<{ valid: boolean, error?: string }>}
+ */
+export function validateImageDimensions(file, minWidth = 200, minHeight = 200) {
+  return new Promise((resolve) => {
+    if (!file || !file.type.startsWith('image/')) {
+      resolve({ valid: false, error: 'Not an image file' })
+      return
+    }
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(img.src)
+      if (img.width < minWidth || img.height < minHeight) {
+        resolve({ valid: false, error: `Image must be at least ${minWidth}×${minHeight}px. Your image is ${img.width}×${img.height}px.` })
+      } else {
+        resolve({ valid: true })
+      }
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src)
+      resolve({ valid: false, error: 'Could not read image file' })
+    }
+    img.src = URL.createObjectURL(file)
+  })
+}
+
+// ─────────────────────────────────────────────
 // Public — Submit Application (no auth required)
 // ─────────────────────────────────────────────
 
@@ -24,6 +95,7 @@ export async function submitApplication(formData) {
       department_id: formData.department_id || null,
       bio: formData.bio || null,
       documents_url: formData.documents_url || null,
+      photo_url: formData.photo_url || null,
       hospital_name: formData.hospital_name || null,
       hospital_address: formData.hospital_address || null,
       hospital_city: formData.hospital_city || null,
@@ -82,6 +154,10 @@ export async function checkEmailExists(email) {
  * Returns the public URL of the uploaded file.
  */
 export async function uploadApplicationDocument(file, applicationEmail) {
+  // Validate file before upload
+  const validation = validateFile(file, 'document')
+  if (!validation.valid) throw new Error(validation.error)
+
   const timestamp = Date.now()
   const safeEmail = applicationEmail.replace(/[^a-zA-Z0-9]/g, '_')
   const ext = file.name.split('.').pop()
@@ -96,6 +172,48 @@ export async function uploadApplicationDocument(file, applicationEmail) {
 
   if (error) throw error
   return path
+}
+
+/**
+ * Upload applicant photo to Supabase storage.
+ * Returns the storage path of the uploaded photo.
+ */
+export async function uploadApplicationPhoto(file, applicationEmail) {
+  // Validate file type and size
+  const validation = validateFile(file, 'photo')
+  if (!validation.valid) throw new Error(validation.error)
+
+  // Validate image dimensions
+  const dimValidation = await validateImageDimensions(
+    file,
+    FILE_CONSTRAINTS.photo.minWidth,
+    FILE_CONSTRAINTS.photo.minHeight
+  )
+  if (!dimValidation.valid) throw new Error(dimValidation.error)
+
+  const timestamp = Date.now()
+  const safeEmail = applicationEmail.replace(/[^a-zA-Z0-9]/g, '_')
+  const ext = file.name.split('.').pop()
+  const path = `${safeEmail}/${timestamp}_photo.${ext}`
+
+  const { error } = await supabase.storage
+    .from('collaborate-photos')
+    .upload(path, file, {
+      cacheControl: '3600',
+      upsert: false
+    })
+
+  if (error) throw error
+  return path
+}
+
+/**
+ * Get the public URL of an uploaded photo.
+ */
+export function getPhotoPublicUrl(path) {
+  if (!path) return null
+  const { data } = supabase.storage.from('collaborate-photos').getPublicUrl(path)
+  return data?.publicUrl || null
 }
 
 
@@ -309,4 +427,42 @@ export async function getApplicationStats() {
   }
 
   return stats
+}
+
+// ─────────────────────────────────────────────
+// Public — Application Status Lookup
+// ─────────────────────────────────────────────
+
+/**
+ * Look up an application by email and application ID.
+ * Public access — used on the status page.
+ */
+export async function getApplicationByEmailAndId(email, applicationId) {
+  const { data, error } = await supabase
+    .from('collaboration_applications')
+    .select(`*, departments (name)`)
+    .eq('id', applicationId)
+    .eq('applicant_email', email.toLowerCase().trim())
+    .maybeSingle()
+
+  if (error) throw error
+  return data
+}
+
+/**
+ * Generate a signed download URL for an uploaded document.
+ * Returns a temporary URL (valid for 60 minutes).
+ */
+export async function getDocumentDownloadUrl(documentPath) {
+  if (!documentPath) return null
+
+  const { data, error } = await supabase.storage
+    .from('collaborate-docs')
+    .createSignedUrl(documentPath, 3600) // 1 hour expiry
+
+  if (error) {
+    console.error('Error generating signed URL:', error)
+    return null
+  }
+  return data?.signedUrl || null
 }
