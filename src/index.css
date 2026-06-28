@@ -2152,6 +2152,514 @@ body.nav-open {
   color: var(--primary-light);
 }
 
+/* ═══════════════════════════════════════════════
+   HOSPITAL INFO MANAGEMENT STYLES
+   ═══════════════════════════════════════════════ */
+
+/* ─── Hospital Info Card (Patient View) ─── */
+.hospital-info-card {
+  background: white;
+  border-radius: var(--radius-lg, 16px);
+  border: 1px solid var(--gray-100);
+  overflow: hidden;
+  transition: var(--transition);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+.hospital-info-card:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+}
+.hospital-info-card-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--gray-100);
+}
+.hospital-info-card-header h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hospital-info-card-body {
+  padding: 20px;
+}
+.hospital-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.hospital-summary-text {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--gray-600);
+  margin: 12px 0;
+}
+.hospital-summary-text.collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.hospital-summary-toggle {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 4px;
+}
+.hospital-summary-toggle:hover { text-decoration: underline; }
+.hospital-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray-50);
+}
+.hospital-detail-row:last-child { border-bottom: none; }
+.hospital-detail-label {
+  font-size: 13px;
+  color: var(--gray-500);
+  flex-shrink: 0;
+  min-width: 100px;
+}
+.hospital-detail-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dark);
+  text-align: right;
+}
+.hospital-website-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md, 10px);
+  background: rgba(0,119,182,0.06);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition);
+  border: 1px solid rgba(0,119,182,0.1);
+}
+.hospital-website-link:hover {
+  background: rgba(0,119,182,0.12);
+  color: var(--primary-dark, #005a8a);
+  transform: translateY(-1px);
+}
+
+/* ─── Hospital Photo Grid ─── */
+.hospital-photo-grid {
+  display: grid;
+  gap: 8px;
+  border-radius: var(--radius-md, 10px);
+  overflow: hidden;
+}
+.hospital-photo-grid-1 { grid-template-columns: 1fr; }
+.hospital-photo-grid-2 { grid-template-columns: 1fr 1fr; }
+.hospital-photo-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+  aspect-ratio: 16 / 10;
+}
+.hospital-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hospital-photo-item:hover .hospital-photo-img {
+  transform: scale(1.05);
+}
+.hospital-photo-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease;
+}
+.hospital-photo-overlay i {
+  color: white;
+  font-size: 24px;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.3s ease;
+}
+.hospital-photo-item:hover .hospital-photo-overlay {
+  background: rgba(0,0,0,0.35);
+}
+.hospital-photo-item:hover .hospital-photo-overlay i {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ─── Hospital Photo Lightbox ─── */
+.hospital-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+  backdrop-filter: blur(12px);
+}
+.hospital-lightbox-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.hospital-lightbox-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background 0.2s;
+  z-index: 10;
+}
+.hospital-lightbox-close:hover { background: rgba(255,255,255,0.3); }
+.hospital-lightbox-img {
+  max-width: 90vw;
+  max-height: 80vh;
+  border-radius: 12px;
+  object-fit: contain;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.hospital-lightbox-caption {
+  margin-top: 16px;
+  color: rgba(255,255,255,0.7);
+  font-size: 14px;
+  font-weight: 600;
+}
+.hospital-lightbox-nav {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.hospital-lightbox-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.4);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+.hospital-lightbox-dot.active {
+  background: white;
+  border-color: white;
+}
+.hospital-lightbox-dot:hover { border-color: white; }
+
+/* ─── Hospital Photo Upload Slots (Doctor Edit) ─── */
+.hospital-photo-upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.hospital-photo-upload-slot {
+  position: relative;
+  border: 2px dashed var(--gray-200);
+  border-radius: var(--radius-md, 10px);
+  aspect-ratio: 16 / 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--gray-50);
+  overflow: hidden;
+}
+.hospital-photo-upload-slot:hover {
+  border-color: var(--primary);
+  background: rgba(0,119,182,0.03);
+}
+.hospital-photo-upload-slot.has-photo {
+  border-style: solid;
+  border-color: var(--gray-200);
+  cursor: default;
+}
+.hospital-photo-upload-slot .upload-placeholder-icon {
+  font-size: 32px;
+  color: var(--gray-300);
+  margin-bottom: 8px;
+}
+.hospital-photo-upload-slot .upload-placeholder-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-400);
+}
+.hospital-photo-upload-slot .upload-placeholder-hint {
+  font-size: 11px;
+  color: var(--gray-300);
+  margin-top: 2px;
+}
+.hospital-photo-upload-slot .photo-preview-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.hospital-photo-upload-slot .photo-preview-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hospital-photo-upload-slot .photo-remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(239,35,60,0.9);
+  color: white;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 2;
+}
+.hospital-photo-upload-slot:hover .photo-remove-btn { opacity: 1; }
+.hospital-photo-upload-slot .photo-slot-label {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* ─── Hospital Map Styles ─── */
+.hospital-map-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+}
+.hospital-map-container {
+  width: 100%;
+  min-height: 200px;
+  z-index: 1;
+}
+.hospital-map-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: white;
+  border-bottom: 1px solid var(--gray-100);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.hospital-map-locate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 6px 12px !important;
+  border-radius: 8px;
+  color: var(--primary);
+  font-weight: 600;
+}
+.hospital-map-hint {
+  font-size: 11px;
+  color: var(--gray-400);
+}
+.hospital-map-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-50);
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+}
+
+/* Custom Leaflet marker pin */
+.hospital-map-marker {
+  background: transparent !important;
+  border: none !important;
+}
+.hospital-marker-pin {
+  width: 40px;
+  height: 40px;
+  background: var(--primary);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,119,182,0.4);
+  animation: markerBounce 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hospital-marker-pin i {
+  transform: rotate(45deg);
+  color: white;
+  font-size: 16px;
+}
+
+@keyframes markerBounce {
+  0% { transform: rotate(-45deg) translateY(-20px); opacity: 0; }
+  60% { transform: rotate(-45deg) translateY(4px); }
+  100% { transform: rotate(-45deg) translateY(0); opacity: 1; }
+}
+
+/* ─── Hospital Manage Cards (Doctor Edit) ─── */
+.hospital-manage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.hospital-manage-card {
+  background: white;
+  border-radius: var(--radius-lg, 16px);
+  border: 1px solid var(--gray-100);
+  overflow: hidden;
+  transition: var(--transition);
+}
+.hospital-manage-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+.hospital-manage-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-100);
+  cursor: pointer;
+}
+.hospital-manage-card-header h6 {
+  margin: 0;
+  font-weight: 700;
+  font-family: var(--font-display);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hospital-manage-card-actions {
+  display: flex;
+  gap: 8px;
+}
+.hospital-manage-card-body {
+  padding: 20px;
+}
+.hospital-manage-card-body.collapsed {
+  display: none;
+}
+
+/* ─── Hospital Form Section Headers ─── */
+.hospital-form-section {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--gray-100);
+}
+.hospital-form-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.hospital-form-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hospital-form-section-title i {
+  color: var(--primary);
+  font-size: 16px;
+}
+
+/* ─── Hospital Tab Selector (Doctor) ─── */
+.hospital-tab-empty {
+  text-align: center;
+  padding: 60px 20px;
+}
+.hospital-tab-empty i {
+  font-size: 56px;
+  color: var(--gray-200);
+  margin-bottom: 16px;
+}
+.hospital-tab-empty h5 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 8px;
+}
+.hospital-tab-empty p {
+  font-size: 14px;
+  color: var(--gray-400);
+  max-width: 400px;
+  margin: 0 auto 20px;
+  line-height: 1.7;
+}
+
+/* ─── Hospital Cards List (Patient Profile) ─── */
+.hospital-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.hospital-card-divider {
+  height: 1px;
+  background: var(--gray-100);
+  margin: 4px 0;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  .hospital-photo-upload-grid {
+    grid-template-columns: 1fr;
+  }
+  .hospital-photo-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .hospital-map-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 /* ─── Print Styles ─── */
 @media print {
   .sidebar, .navbar-custom, .mobile-bottom-nav,
