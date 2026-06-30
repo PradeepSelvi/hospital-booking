@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { getDoctorByUserId } from '../../services/doctors'
 import { searchDoctorPatients } from '../../services/appointments'
 import { getOrCreateConversation } from '../../services/chat'
-import { getPatientRecordsForDoctor, groupByCategory } from '../../services/medicalHistory'
+import { getPatientRecordsForDoctor, groupByCategory, logDocumentAccess } from '../../services/medicalHistory'
 import MedicalDocumentUploader from '../../components/MedicalDocumentUploader'
 import { SkeletonTable } from '../../components/SkeletonLoader'
 import { toast } from 'react-toastify'
@@ -241,7 +241,7 @@ function PatientRecordsModal({ patient, onClose }) {
                   {history.other_info && <Row label="Other" value={history.other_info} />}
                 </div>
               )}
-              <MedicalDocumentUploader grouped={grouped} readOnly />
+              <MedicalDocumentUploader grouped={grouped} readOnly onView={(doc) => logDocumentAccess(doc.id)} />
             </>
           )}
         </div>

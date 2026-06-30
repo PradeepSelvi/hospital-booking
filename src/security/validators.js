@@ -34,7 +34,7 @@ const PATTERNS = {
   specialization: /^[a-zA-Z\s&,/()-]+$/,
 
   // Qualification: letters, spaces, dots, commas, ampersand, slash, hyphen
-  qualification: /^[a-zA-Z\s.,&/()\-]+$/,
+  qualification: /^[a-zA-Z\s.,&/()-]+$/,
 
   // Registration number: alphanumeric, hyphens, slashes
   registrationNumber: /^[A-Za-z0-9\-/]+$/,

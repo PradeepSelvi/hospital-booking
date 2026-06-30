@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import {
   getPatientRecordsForDoctor, groupByCategory,
-  getConsultationNote, saveConsultationNote,
+  getConsultationNote, saveConsultationNote, logDocumentAccess,
 } from '../services/medicalHistory'
-import { completeAppointment } from '../services/appointments'
+import { getPaymentForAppointment, requestAppointmentPayment, paiseToRupees } from '../services/payments'
 import MedicalDocumentUploader from './MedicalDocumentUploader'
 import { toast } from 'react-toastify'
 
@@ -26,6 +26,8 @@ export default function ConsultationModal({ appointment, onClose, onCompleted })
   const [hasAccess, setHasAccess] = useState(false)
   const [note, setNote] = useState({ advisory: '', prescription: '', follow_up: '' })
   const [saving, setSaving] = useState(false)
+  const [amount, setAmount] = useState('')
+  const [payment, setPayment] = useState(null)
 
   const isActive = ['PENDING', 'CONFIRMED'].includes(appointment.status)
 
@@ -34,9 +36,10 @@ export default function ConsultationModal({ appointment, onClose, onCompleted })
     async function load() {
       try {
         setLoading(true)
-        const [{ history: h, documents }, existingNote] = await Promise.all([
+        const [{ history: h, documents }, existingNote, existingPayment] = await Promise.all([
           getPatientRecordsForDoctor(appointment.patient_id),
           getConsultationNote(appointment.id),
+          getPaymentForAppointment(appointment.id),
         ])
         if (!alive) return
         setHistory(h)
@@ -48,6 +51,10 @@ export default function ConsultationModal({ appointment, onClose, onCompleted })
             prescription: existingNote.prescription || '',
             follow_up: existingNote.follow_up || '',
           })
+        }
+        if (existingPayment) {
+          setPayment(existingPayment)
+          setAmount(paiseToRupees(existingPayment.amount_paise))
         }
       } catch (err) {
         toast.error(err.message || 'Could not load patient records.')
@@ -76,20 +83,22 @@ export default function ConsultationModal({ appointment, onClose, onCompleted })
     }
   }
 
-  async function handleCompleteWithNotes() {
+  async function handleRequestPayment() {
+    const rupees = Number(amount)
+    if (!Number.isFinite(rupees) || rupees < 1) {
+      toast.error('Enter a valid consultation amount (at least ₹1).')
+      return
+    }
     try {
       setSaving(true)
       await persistNote()
-      const freed = await completeAppointment(appointment.id)
-      if (freed?.available_from) {
-        toast.success(`Completed. Slot freed from ${freed.available_from.substring(0, 5)} — waiting patients notified.`)
-      } else {
-        toast.success('Consultation completed.')
-      }
+      const p = await requestAppointmentPayment(appointment.id, rupees)
+      setPayment(p)
+      toast.success('Payment requested. The patient can now pay to complete the visit.')
       onCompleted?.()
       onClose?.()
     } catch (err) {
-      toast.error(err.message || 'Could not complete the appointment.')
+      toast.error(err.message || 'Could not request payment.')
     } finally {
       setSaving(false)
     }
@@ -140,7 +149,7 @@ export default function ConsultationModal({ appointment, onClose, onCompleted })
                       {history.other_info && <RecRow label="Other" value={history.other_info} />}
                     </div>
                   )}
-                  <MedicalDocumentUploader grouped={grouped} readOnly />
+                  <MedicalDocumentUploader grouped={grouped} readOnly onView={(doc) => logDocumentAccess(doc.id)} />
                 </div>
               )}
 
@@ -168,13 +177,42 @@ export default function ConsultationModal({ appointment, onClose, onCompleted })
                   onChange={e => setNote(p => ({ ...p, follow_up: e.target.value }))} />
               </div>
 
+              {/* Billing / payment */}
+              <h6 style={{ fontWeight: 600, marginTop: 16 }}>Consultation Charge</h6>
+              {payment?.status === 'PAID' ? (
+                <div className="alert-custom" style={{ padding: '10px 14px', fontSize: 13, background: 'rgba(34,197,94,0.08)', borderRadius: 'var(--radius-md)' }}>
+                  <i className="bi bi-check-circle me-1" style={{ color: '#16A34A' }} />
+                  Paid ₹{paiseToRupees(payment.amount_paise)} ({payment.method === 'OFFLINE' ? 'cash' : 'online'})
+                  {payment.receipt_number ? ` — ${payment.receipt_number}` : ''}
+                </div>
+              ) : (
+                <>
+                  <div className="mb-2">
+                    <label className="form-label-custom">Amount (₹)</label>
+                    <input
+                      type="number" min="1" step="0.01"
+                      className="form-input-custom"
+                      placeholder="e.g. 500"
+                      value={amount}
+                      onChange={e => setAmount(e.target.value)}
+                      style={{ maxWidth: 200 }}
+                    />
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--gray-500)', margin: 0 }}>
+                    The patient chooses online or offline payment. The visit is marked
+                    completed only after payment.
+                    {payment ? ' A payment request already exists; saving updates the amount.' : ''}
+                  </p>
+                </>
+              )}
+
               <div className="d-flex gap-3 mt-4">
                 <button className="btn-ghost flex-fill" onClick={handleSaveOnly} disabled={saving}>
                   Save Notes
                 </button>
-                {isActive && (
-                  <button className="btn-primary-custom flex-fill" onClick={handleCompleteWithNotes} disabled={saving}>
-                    {saving ? 'Saving...' : 'Complete Consultation'}
+                {isActive && payment?.status !== 'PAID' && (
+                  <button className="btn-primary-custom flex-fill" onClick={handleRequestPayment} disabled={saving}>
+                    {saving ? 'Saving...' : 'Save & Request Payment'}
                   </button>
                 )}
               </div>

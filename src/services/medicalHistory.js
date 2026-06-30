@@ -189,14 +189,47 @@ export async function revokeRecordAccess(appointmentId) {
 
 /**
  * Doctor view: fetch a patient's history + documents for an appointment.
- * RLS returns rows only if the patient granted access — otherwise empty.
+ *
+ * Routes through the audited `get_patient_records_for_doctor` RPC, which logs
+ * the access server-side (tamper-resistant) and returns data only when the
+ * patient has granted consent. Returns the same `{ history, documents }` shape
+ * as before; an empty/!consented response yields `{ history: null, documents: [] }`.
  */
 export async function getPatientRecordsForDoctor(patientId) {
-  const [history, documents] = await Promise.all([
-    getMedicalHistory(patientId),
-    getMedicalDocuments(patientId),
-  ])
-  return { history, documents }
+  const { data, error } = await supabase.rpc('get_patient_records_for_doctor', {
+    p_patient_id: patientId,
+  })
+  if (error) throw new Error(error.message || 'Could not load patient records.')
+  return {
+    history: data?.history ?? null,
+    documents: data?.documents ?? [],
+  }
+}
+
+/**
+ * Record that a doctor opened a specific document (server-side audit).
+ * No-op for the owning patient or anyone without consent. Best-effort:
+ * never blocks the actual file view.
+ */
+export async function logDocumentAccess(documentId) {
+  try {
+    await supabase.rpc('log_medical_document_access', { p_document_id: documentId })
+  } catch {
+    /* auditing must not break the UX */
+  }
+}
+
+/**
+ * Patient-facing transparency: who has viewed my records, most recent first.
+ */
+export async function getMyRecordAccessLog(patientId) {
+  const { data, error } = await supabase
+    .from('medical_record_access_log')
+    .select('id, accessor_id, doctor_id, access_type, document_id, accessed_at')
+    .eq('patient_id', patientId)
+    .order('accessed_at', { ascending: false })
+  if (error) throw error
+  return data ?? []
 }
 
 // ─────────────────────────────────────────────

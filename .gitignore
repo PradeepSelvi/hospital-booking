@@ -3,9 +3,9 @@ node_modules/
 
 # Environment
 .env
-.env.example
 .env.local
 .env.*.local
+# Note: .env.example IS committed as a template (do not ignore it)
 
 # Build output
 dist/

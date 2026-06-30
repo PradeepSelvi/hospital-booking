@@ -18,6 +18,7 @@ export default function MedicalDocumentUploader({
   uploadingKey = null,
   onUpload,
   onDelete,
+  onView,
   readOnly = false,
 }) {
   return (
@@ -30,6 +31,7 @@ export default function MedicalDocumentUploader({
           uploading={uploadingKey === cat.key}
           onUpload={onUpload}
           onDelete={onDelete}
+          onView={onView}
           readOnly={readOnly}
         />
       ))}
@@ -37,7 +39,7 @@ export default function MedicalDocumentUploader({
   )
 }
 
-function Section({ category, files, uploading, onUpload, onDelete, readOnly }) {
+function Section({ category, files, uploading, onUpload, onDelete, onView, readOnly }) {
   const fileRef = useRef(null)
   const atLimit = files.length >= MEDICAL_DOC_CONSTRAINTS.maxPerCategory
 
@@ -55,6 +57,8 @@ function Section({ category, files, uploading, onUpload, onDelete, readOnly }) {
 
   async function handleView(doc) {
     try {
+      // Notify parent (used by doctor views to log the access server-side).
+      onView?.(doc)
       const url = await getDocumentUrl(doc.file_path)
       if (url) window.open(url, '_blank', 'noopener')
     } catch {

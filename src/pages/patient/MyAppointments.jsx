@@ -8,10 +8,11 @@ import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import StatusBadge from '../../components/StatusBadge'
 import AppointmentRecordControls from '../../components/AppointmentRecordControls'
+import PaymentSection from '../../components/PaymentSection'
 import { SkeletonAppointmentCards } from '../../components/SkeletonLoader'
 
 export default function MyAppointments() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -197,6 +198,8 @@ export default function MyAppointments() {
                   )}
 
                   <AppointmentRecordControls appointment={apt} patientId={user.id} />
+
+                  <PaymentSection appointment={apt} profile={profile} onPaid={loadAppointments} />
 
                   <button
                     className="btn-outline-custom w-100 mt-2"

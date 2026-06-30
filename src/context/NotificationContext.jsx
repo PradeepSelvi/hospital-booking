@@ -75,7 +75,7 @@ export function NotificationProvider({ children }) {
             const audio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAB/f39/')
             audio.volume = 0.3
             audio.play().catch(() => {})
-          } catch {}
+          } catch { /* notification sound is best-effort */ }
         }
       )
       .subscribe()

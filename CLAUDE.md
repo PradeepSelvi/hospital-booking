@@ -1,98 +1,56 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for AI coding assistants (Claude Code, Kiro, Cursor, etc.) working in
+this repository.
 
-## Project Overview
+## Project overview
 
-Antigravity Kit is an AI-powered design intelligence toolkit providing searchable databases of UI styles, color palettes, font pairings, chart types, and UX guidelines. It works as a skill/workflow for AI coding assistants (Claude Code, Windsurf, Cursor, etc.).
+**MediBook** is a hospital appointment & management system. Frontend is React 18
++ Vite; backend is Supabase (Postgres with Row Level Security, Auth, Storage,
+Realtime, Edge Functions). Four roles: **PATIENT, DOCTOR, ADMIN, HOSPITAL**.
 
-## Search Command
+See `README.md` for setup, scripts, and environment variables.
 
-```bash
-python3 src/ui-ux-pro-max/scripts/search.py "<query>" --domain <domain> [-n <max_results>]
-```
+## Architecture & conventions
 
-**Domain search:**
-- `product` - Product type recommendations (SaaS, e-commerce, portfolio)
-- `style` - UI styles (glassmorphism, minimalism, brutalism) + AI prompts and CSS keywords
-- `typography` - Font pairings with Google Fonts imports
-- `color` - Color palettes by product type
-- `landing` - Page structure and CTA strategies
-- `chart` - Chart types and library recommendations
-- `ux` - Best practices and anti-patterns
+- **Data access** goes through `src/services/*.js` — one module per domain
+  (`appointments`, `chat`, `medicalHistory`, `doctors`, `profiles`, ...).
+  UI components/pages should call services, not the Supabase client directly.
+- **Supabase client** is created once in `src/lib/supabase.js`. The browser uses
+  the **anon key only**. The service-role key lives exclusively in Edge Functions.
+- **Security model is RLS-first.** Authorization is enforced in the database via
+  policies, not in the client. When adding tables, always add RLS policies.
+  For multi-step or race-sensitive operations (e.g. booking), use a Postgres
+  function (RPC) so the check + write are atomic — see `book_appointment` and
+  `get_or_create_conversation`.
+- **Routing**: `src/App.jsx` defines lazy-loaded routes. `ProtectedRoute`
+  (`src/routes/ProtectedRoute.jsx`) gates by role and waits for the profile to
+  load before rendering.
+- **Patient** screens use the top `Navbar`; **Doctor/Admin/Hospital** screens use
+  the `Sidebar` inside their layout. The Sidebar has a mobile drawer.
+- **Styling**: Bootstrap 5 + custom classes in `src/index.css`
+  (`card-custom`, `btn-primary-custom`, `form-input-custom`, etc.). Reuse these.
+- **Input** is sanitized via `src/security/sanitize.js` before persisting.
 
-**Stack search:**
-```bash
-python3 src/ui-ux-pro-max/scripts/search.py "<query>" --stack <stack>
-```
-Available stacks: `html-tailwind` (default), `react`, `nextjs`, `astro`, `vue`, `nuxtjs`, `nuxt-ui`, `svelte`, `swiftui`, `react-native`, `flutter`, `shadcn`, `jetpack-compose`
+## Database migrations — IMPORTANT
 
-## Architecture
+- The single source of truth is **`supabase/migrations/`** (numbered `001`→`020`).
+- Read `supabase/migrations/README.md` before changing schema.
+- To add schema: create the next-numbered file (`021_...`), make it idempotent
+  (`CREATE TABLE IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`,
+  `DROP POLICY IF EXISTS` before `CREATE POLICY`), and document it in that README.
+- **Never edit an already-applied migration** — add a new one.
+- Note the name clash history: the AI assistant uses `chat_messages`
+  (migration 014); patient↔doctor chat uses `direct_messages` (migration 020).
+  Don't reintroduce a `chat_messages` collision.
 
-```
-src/ui-ux-pro-max/                # Source of Truth
-├── data/                         # Canonical CSV databases
-│   ├── products.csv, styles.csv, colors.csv, typography.csv, ...
-│   └── stacks/                   # Stack-specific guidelines
-├── scripts/
-│   ├── search.py                 # CLI entry point
-│   ├── core.py                   # BM25 + regex hybrid search engine
-│   └── design_system.py          # Design system generation
-└── templates/
-    ├── base/                     # Base templates (skill-content.md, quick-reference.md)
-    └── platforms/                # Platform configs (claude.json, cursor.json, ...)
+## Verifying changes
 
-cli/                              # CLI installer (uipro-cli on npm)
-├── src/
-│   ├── commands/init.ts          # Install command with template generation
-│   └── utils/template.ts         # Template rendering engine
-└── assets/                       # Bundled assets (~564KB)
-    ├── data/                     # Copy of src/ui-ux-pro-max/data/
-    ├── scripts/                  # Copy of src/ui-ux-pro-max/scripts/
-    └── templates/                # Copy of src/ui-ux-pro-max/templates/
+- After editing code, run `npm run lint` and `npm run build` to confirm it compiles.
+- There is no automated test suite yet (a known gap). When adding tests, prefer
+  Vitest + React Testing Library.
 
-.claude/skills/ui-ux-pro-max/     # Claude Code skill (symlinks to src/)
-.factory/skills/ui-ux-pro-max/   # Droid (Factory) skill (symlinks to src/)
-.shared/ui-ux-pro-max/            # Symlink to src/ui-ux-pro-max/
-.claude-plugin/                   # Claude Marketplace publishing
-```
+## Git workflow
 
-The search engine uses BM25 ranking combined with regex matching. Domain auto-detection is available when `--domain` is omitted.
-
-## Sync Rules
-
-**Source of Truth:** `src/ui-ux-pro-max/`
-
-When modifying files:
-
-1. **Data & Scripts** - Edit in `src/ui-ux-pro-max/`:
-   - `data/*.csv` and `data/stacks/*.csv`
-   - `scripts/*.py`
-   - Changes automatically available via symlinks in `.claude/`, `.factory/`, `.shared/`
-
-2. **Templates** - Edit in `src/ui-ux-pro-max/templates/`:
-   - `base/skill-content.md` - Common SKILL.md content
-   - `base/quick-reference.md` - Quick reference section (Claude only)
-   - `platforms/*.json` - Platform-specific configs
-
-3. **CLI Assets** - Run sync before publishing:
-   ```bash
-   cp -r src/ui-ux-pro-max/data/* cli/assets/data/
-   cp -r src/ui-ux-pro-max/scripts/* cli/assets/scripts/
-   cp -r src/ui-ux-pro-max/templates/* cli/assets/templates/
-   ```
-
-4. **Reference Folders** - No manual sync needed. The CLI generates these from templates during `uipro init`.
-
-## Prerequisites
-
-Python 3.x (no external dependencies required)
-
-## Git Workflow
-
-Never push directly to `main`. Always:
-
-1. Create a new branch: `git checkout -b feat/...` or `fix/...`
-2. Commit changes
-3. Push branch: `git push -u origin <branch>`
-4. Create PR: `gh pr create`
+- Never push directly to `main`. Create a feature branch, commit, push, open a PR.
+- Only create commits when explicitly asked.

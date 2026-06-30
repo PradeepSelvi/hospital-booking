@@ -280,8 +280,7 @@ export default function LandingPage() {
                 <Link to="/collaborate" className="btn-primary-custom" id="collaborate-cta-btn">
                   Apply to Join <i className="bi bi-arrow-right ms-1" />
                 </Link>
-                <Link to="/collaborate/status" className="btn-outline-custom" id="collaborate-status-btn"
-                  style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
+                <Link to="/collaborate/status" className="btn-outline-custom" id="collaborate-status-btn">
                   <i className="bi bi-clipboard2-pulse me-2" />Check Application Status
                 </Link>
               </div>
