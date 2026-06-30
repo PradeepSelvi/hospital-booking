@@ -292,7 +292,7 @@ export async function approveApplication(id, password, adminId) {
   if (!application) throw new Error('Application not found')
   if (application.status === 'APPROVED') throw new Error('Application already approved')
 
-  const role = application.application_type === 'DOCTOR' ? 'DOCTOR' : 'DOCTOR' // Hospitals get DOCTOR role for now
+  const role = application.application_type === 'HOSPITAL' ? 'HOSPITAL' : 'DOCTOR'
 
   // 2. Create an ISOLATED Supabase client for signUp.
   //    This client does NOT persist sessions and does NOT trigger
@@ -345,7 +345,7 @@ export async function approveApplication(id, password, adminId) {
     .update({ name: application.applicant_name, phone: application.applicant_phone })
     .eq('id', userId)
 
-  // 7. Create doctor record if application_type is DOCTOR
+  // 7. Create the role-specific record
   if (application.application_type === 'DOCTOR') {
     const { error: docError } = await supabase.from('doctors').insert([{
       user_id: userId,
@@ -359,6 +359,25 @@ export async function approveApplication(id, password, adminId) {
       is_active: true
     }])
     if (docError) throw docError
+  } else if (application.application_type === 'HOSPITAL') {
+    // Create the first-class hospital record linked to the new user
+    const { error: hospError } = await supabase.from('hospitals').insert([{
+      owner_user_id: userId,
+      name: application.hospital_name || application.applicant_name,
+      type: application.hospital_type || null,
+      registration_number: application.registration_number || null,
+      bed_count: application.bed_count || null,
+      address: application.hospital_address || null,
+      city: application.hospital_city || null,
+      state: application.hospital_state || null,
+      pincode: application.hospital_pincode || null,
+      email: application.applicant_email || null,
+      phone: application.applicant_phone || null,
+      summary_text: application.bio || null,
+      is_active: true,
+      is_verified: true
+    }])
+    if (hospError) throw hospError
   }
 
   // 8. Mark application as APPROVED
@@ -452,6 +471,10 @@ export async function getApplicationByEmailAndId(email, applicationId) {
 /**
  * Generate a signed download URL for an uploaded document.
  * Returns a temporary URL (valid for 60 minutes).
+ *
+ * NOTE: This direct-signing path requires storage read access and is used
+ * by ADMINS (who have the collab_docs_admin_read policy). Anonymous
+ * applicants must use getApplicantDocumentUrl() instead.
  */
 export async function getDocumentDownloadUrl(documentPath) {
   if (!documentPath) return null
@@ -465,4 +488,31 @@ export async function getDocumentDownloadUrl(documentPath) {
     return null
   }
   return data?.signedUrl || null
+}
+
+/**
+ * Securely fetch a signed document URL for an applicant on the public
+ * status page. Ownership is verified server-side (email + application ID
+ * must match) by the 'collab-document' edge function, which signs the URL
+ * with the service role. The bucket stays private and admin-only at the
+ * RLS level.
+ *
+ * @param {string} email - Applicant email used in the status lookup
+ * @param {number} applicationId - Application ID
+ * @returns {Promise<string|null>} Signed URL or null
+ */
+export async function getApplicantDocumentUrl(email, applicationId) {
+  try {
+    const { data, error } = await supabase.functions.invoke('collab-document', {
+      body: { email, applicationId }
+    })
+    if (error) {
+      console.error('Document access error:', error)
+      return null
+    }
+    return data?.url || null
+  } catch (err) {
+    console.error('Document access error:', err)
+    return null
+  }
 }

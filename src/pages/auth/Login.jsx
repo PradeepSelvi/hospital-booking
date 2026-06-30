@@ -23,7 +23,7 @@ export default function Login() {
 
   useEffect(() => {
     if (loginSuccess && currentProfile?.role) {
-      const redirectMap = { PATIENT: '/patient/dashboard', DOCTOR: '/doctor/dashboard', ADMIN: '/admin/dashboard' }
+      const redirectMap = { PATIENT: '/patient/dashboard', DOCTOR: '/doctor/dashboard', ADMIN: '/admin/dashboard', HOSPITAL: '/hospital/dashboard' }
       navigate(from !== '/' ? from : (redirectMap[currentProfile.role] ?? '/'), { replace: true })
     }
   }, [loginSuccess, currentProfile])

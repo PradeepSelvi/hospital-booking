@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'react-toastify'
-import { getApplicationByEmailAndId, getDocumentDownloadUrl, getPhotoPublicUrl } from '../../services/collaborate'
+import { getApplicationByEmailAndId, getApplicantDocumentUrl, getPhotoPublicUrl } from '../../services/collaborate'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import './CollaborateApplication.css'
@@ -97,7 +97,7 @@ export default function ApplicationStatus() {
     if (!application?.documents_url) return
     try {
       setDownloadingDoc(true)
-      const url = await getDocumentDownloadUrl(application.documents_url)
+      const url = await getApplicantDocumentUrl(application.applicant_email, application.id)
       if (url) {
         window.open(url, '_blank')
       } else {
@@ -114,7 +114,7 @@ export default function ApplicationStatus() {
     if (!application?.documents_url) return
     try {
       setLoadingDocView(true)
-      const url = await getDocumentDownloadUrl(application.documents_url)
+      const url = await getApplicantDocumentUrl(application.applicant_email, application.id)
       if (url) {
         setDocViewerUrl(url)
         setShowDocViewer(true)

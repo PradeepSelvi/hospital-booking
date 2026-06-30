@@ -267,6 +267,17 @@ export async function deactivateAccount(userId) {
 }
 
 /**
+ * Permanently close the current user's account (self-service).
+ * Calls the secure SECURITY DEFINER RPC which deactivates the caller's
+ * profile + doctor/hospital records atomically and records the reason.
+ * After this resolves, the caller should be signed out.
+ */
+export async function closeMyAccount(reason = null) {
+  const { error } = await supabase.rpc('close_my_account', { reason })
+  if (error) throw error
+}
+
+/**
  * Calculate profile completeness percentage
  */
 export function calculateCompleteness(profile, patientDetails = null) {

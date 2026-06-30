@@ -27,7 +27,8 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     const roleRoutes = {
       PATIENT: '/patient/dashboard',
       DOCTOR: '/doctor/dashboard',
-      ADMIN: '/admin/dashboard'
+      ADMIN: '/admin/dashboard',
+      HOSPITAL: '/hospital/dashboard'
     }
     return <Navigate to={roleRoutes[profile.role] ?? '/'} replace />
   }

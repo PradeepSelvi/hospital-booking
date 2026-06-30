@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { SPECIALIZATIONS } from '../data/specializations'
 
 export default function Footer() {
   const year = new Date().getFullYear()
@@ -69,8 +70,16 @@ export default function Footer() {
               Specializations
             </h6>
             <div className="d-flex flex-column gap-2">
-              {['Cardiology', 'Neurology', 'Orthopedics', 'Pediatrics', 'Dermatology'].map(spec => (
-                <span key={spec} style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>{spec}</span>
+              {SPECIALIZATIONS.slice(0, 5).map(spec => (
+                <Link
+                  key={spec.slug}
+                  to={`/specializations/${spec.slug}`}
+                  style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, textDecoration: 'none', transition: 'var(--transition)' }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--primary-light)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+                >
+                  {spec.name}
+                </Link>
               ))}
             </div>
           </div>
@@ -104,15 +113,18 @@ export default function Footer() {
             © {year} MediBook. All rights reserved.
           </p>
           <div className="d-flex gap-4">
-            {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map(item => (
-              <span
-                key={item}
-                role="link"
-                aria-disabled="true"
+            {[
+              { label: 'Privacy Policy', to: '/privacy-policy' },
+              { label: 'Terms of Service', to: '/terms-of-service' },
+            ].map(item => (
+              <Link
+                key={item.label}
+                to={item.to}
                 className="footer-policy-link"
+                style={{ textDecoration: 'none' }}
               >
-                {item}
-              </span>
+                {item.label}
+              </Link>
             ))}
           </div>
         </div>

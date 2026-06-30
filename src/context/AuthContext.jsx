@@ -102,6 +102,20 @@ export function AuthProvider({ children }) {
       }
       setProfile(data)
 
+      // Account closure / deactivation gate: a closed account must not be able
+      // to use the app. Sign out immediately and surface a clear message.
+      if (data?.is_active === false) {
+        setProfile(null)
+        setProfileError('This account has been closed. Please contact support if you believe this is a mistake.')
+        await supabase.auth.signOut()
+        if (sessionGuardRef.current) {
+          sessionGuardRef.current.stop()
+          sessionGuardRef.current = null
+        }
+        setUser(null)
+        return
+      }
+
       // Check onboarding status for PATIENT and DOCTOR roles
       if (data?.role === 'PATIENT' || data?.role === 'DOCTOR') {
         try {

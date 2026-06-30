@@ -15,6 +15,7 @@ import { SkeletonProfilePage } from '../../components/SkeletonLoader'
 import { validateField, validatePhone, RULES } from '../../security/validators'
 import { sanitizeFormData } from '../../security/sanitize'
 import AIWriteAssistant from '../../components/AIWriteAssistant'
+import AccountClosure from '../../components/AccountClosure'
 
 export default function PatientProfile() {
   const { user, profile: authProfile, refreshProfile } = useAuth()
@@ -524,34 +525,8 @@ export default function PatientProfile() {
                   </div>
                 </div>
 
-                {/* Danger Zone */}
-                <div className="deactivate-zone mt-3">
-                  <h6 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--danger)', marginBottom: 8 }}>
-                    <i className="bi bi-exclamation-triangle me-2" />
-                    Danger Zone
-                  </h6>
-                  <p style={{ fontSize: 13, color: 'var(--gray-500)', marginBottom: 16 }}>
-                    Deactivating your account will prevent you from logging in and booking appointments.
-                    Your data will be preserved and you can contact support to reactivate.
-                  </p>
-                  <button
-                    id="deactivate-account"
-                    className="btn-ghost"
-                    style={{ color: 'var(--danger)', border: '1px solid rgba(239,35,60,0.3)', background: 'rgba(239,35,60,0.05)' }}
-                    onClick={() => {
-                      if (window.confirm('Are you sure you want to deactivate your account? This action can be reversed by contacting support.')) {
-                        import('../../services/profiles').then(({ deactivateAccount }) => {
-                          deactivateAccount(user.id).then(() => {
-                            toast.success('Account deactivated. You will be logged out.')
-                            setTimeout(() => window.location.href = '/', 1500)
-                          })
-                        })
-                      }
-                    }}
-                  >
-                    <i className="bi bi-power me-1" /> Deactivate Account
-                  </button>
-                </div>
+                {/* Danger Zone — Account Closure */}
+                <AccountClosure role="PATIENT" />
               </div>
             )}
           </div>

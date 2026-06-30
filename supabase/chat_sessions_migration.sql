@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.chat_sessions (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
+    
 COMMENT ON TABLE public.chat_sessions IS 'Stores AI chatbot conversation sessions per user.';
 
 -- ─────────────────────────────────────────────

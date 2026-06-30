@@ -2,17 +2,8 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-
-const SPECIALIZATIONS = [
-  { icon: 'bi-heart-pulse', name: 'Cardiology', desc: 'Heart & Blood Vessels' },
-  { icon: 'bi-lightning', name: 'Neurology', desc: 'Brain & Nervous System' },
-  { icon: 'bi-bone', name: 'Orthopedics', desc: 'Bones & Joints' },
-  { icon: 'bi-emoji-smile', name: 'Pediatrics', desc: 'Child Healthcare' },
-  { icon: 'bi-droplet', name: 'Dermatology', desc: 'Skin & Hair' },
-  { icon: 'bi-eye', name: 'Ophthalmology', desc: 'Eye Care' },
-  { icon: 'bi-lungs', name: 'General Physician', desc: 'General Healthcare' },
-  { icon: 'bi-clipboard2-pulse', name: 'Psychiatry', desc: 'Mental Health' },
-]
+import ContactSupportSection from '../components/ContactSupportSection'
+import { SPECIALIZATIONS } from '../data/specializations'
 
 const STEPS = [
   { icon: 'bi-search', num: '01', title: 'Search Doctor', desc: 'Browse our network of qualified doctors by specialization, name, or department.' },
@@ -145,7 +136,7 @@ export default function LandingPage() {
               <div key={i} className="col-6 col-md-3">
                 <div
                   className="card-custom p-4 text-center cursor-pointer h-100"
-                  onClick={() => navigate(`/doctors?spec=${encodeURIComponent(spec.name)}`)}
+                  onClick={() => navigate(`/specializations/${spec.slug}`)}
                   style={{ border: 'none' }}
                 >
                   <div style={{
@@ -336,6 +327,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Contact, Feedback & Complaints ── */}
+      <ContactSupportSection />
 
       {/* ── CTA ── */}
       <section style={{

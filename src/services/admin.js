@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { sanitizeSearchTerm } from '../security/sanitize'
 
 export async function getDepartments() {
   const { data, error } = await supabase
@@ -30,6 +31,55 @@ export async function getAllPatients() {
     .from('profiles').select('*').eq('role', 'PATIENT').order('name')
   if (error) throw error
   return data ?? []
+}
+
+// ─────────────────────────────────────────────
+// User Management (Account Closures)
+// ─────────────────────────────────────────────
+
+/**
+ * List user accounts for the admin Users panel.
+ * @param {Object} filters - { role, status: 'ALL'|'ACTIVE'|'CLOSED', search }
+ */
+export async function getAllUsers(filters = {}) {
+  let query = supabase
+    .from('profiles')
+    .select('id, name, email, role, is_active, closed_at, closure_reason, created_at')
+    .order('created_at', { ascending: false })
+
+  if (filters.role) query = query.eq('role', filters.role)
+  if (filters.status === 'ACTIVE') query = query.eq('is_active', true)
+  if (filters.status === 'CLOSED') query = query.eq('is_active', false)
+  if (filters.search) {
+    const term = sanitizeSearchTerm(filters.search)
+    if (term) query = query.or(`name.ilike.%${term}%,email.ilike.%${term}%`)
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data ?? []
+}
+
+/**
+ * Counts for the admin Users panel header.
+ */
+export async function getUserStats() {
+  const [totalRes, closedRes] = await Promise.all([
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('is_active', false),
+  ])
+  const total = totalRes.count ?? 0
+  const closed = closedRes.count ?? 0
+  return { total, closed, active: total - closed }
+}
+
+/**
+ * Reopen (reactivate) a closed account without data loss.
+ * Calls the admin-only SECURITY DEFINER RPC.
+ */
+export async function reopenAccount(targetUserId) {
+  const { error } = await supabase.rpc('admin_reopen_account', { target_user_id: targetUserId })
+  if (error) throw error
 }
 
 export async function createDoctorAccount({ email, password, name, phone, specialization, qualification, experience_years, consultation_fee, department_id }) {

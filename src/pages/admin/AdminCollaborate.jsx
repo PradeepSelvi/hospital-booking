@@ -7,7 +7,9 @@ import {
   updateApplicationStatus,
   approveApplication,
   rejectApplication,
-  getApplicationStats
+  getApplicationStats,
+  getDocumentDownloadUrl,
+  getPhotoPublicUrl
 } from '../../services/collaborate'
 import { getDepartments } from '../../services/admin'
 import { SkeletonTable } from '../../components/SkeletonLoader'
@@ -47,6 +49,9 @@ export default function AdminCollaborate() {
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [rejecting, setRejecting] = useState(false)
+
+  // Document viewing
+  const [loadingDoc, setLoadingDoc] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -173,6 +178,23 @@ export default function AdminCollaborate() {
   }
 
   const strength = getPasswordStrength(approvePassword)
+
+  async function handleViewDocument() {
+    if (!selectedApp?.documents_url) return
+    try {
+      setLoadingDoc(true)
+      const url = await getDocumentDownloadUrl(selectedApp.documents_url)
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer')
+      } else {
+        toast.error('Could not open document. Please try again.')
+      }
+    } catch (err) {
+      toast.error('Failed to open document')
+    } finally {
+      setLoadingDoc(false)
+    }
+  }
 
   function formatDate(dateStr) {
     if (!dateStr) return '—'
@@ -495,13 +517,54 @@ export default function AdminCollaborate() {
                 </div>
               )}
 
+              {/* Applicant Photo */}
+              {selectedApp.photo_url && (
+                <div className="detail-section">
+                  <div className="detail-section-title">Applicant Photo</div>
+                  <a
+                    href={getPhotoPublicUrl(selectedApp.photo_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open full size"
+                  >
+                    <img
+                      src={getPhotoPublicUrl(selectedApp.photo_url)}
+                      alt="Applicant"
+                      style={{
+                        width: 110, height: 110, objectFit: 'cover',
+                        borderRadius: 'var(--radius-md, 10px)', border: '1px solid var(--gray-200)'
+                      }}
+                    />
+                  </a>
+                </div>
+              )}
+
               {/* Documents */}
               {selectedApp.documents_url && (
                 <div className="detail-section">
                   <div className="detail-section-title">Uploaded Documents</div>
-                  <div className="d-flex align-items-center gap-2" style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>
-                    <i className="bi bi-file-earmark-medical" />
-                    <span>{selectedApp.documents_url.split('/').pop()}</span>
+                  <div className="d-flex align-items-center gap-3 p-3"
+                    style={{ background: 'var(--gray-50)', borderRadius: 'var(--radius-md, 10px)' }}>
+                    <i className="bi bi-file-earmark-medical" style={{ fontSize: 24, color: 'var(--primary)' }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }} className="truncate">
+                        {selectedApp.documents_url.split('/').pop()}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--gray-400)' }}>Submitted document</div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-outline-custom"
+                      style={{ fontSize: 12, padding: '6px 14px', whiteSpace: 'nowrap' }}
+                      onClick={handleViewDocument}
+                      disabled={loadingDoc}
+                    >
+                      {loadingDoc ? (
+                        <><div className="spinner-custom" style={{ width: 14, height: 14, borderWidth: 2 }} /> Opening...</>
+                      ) : (
+                        <><i className="bi bi-eye me-1" />View Document</>
+                      )}
+                    </button>
                   </div>
                 </div>
               )}

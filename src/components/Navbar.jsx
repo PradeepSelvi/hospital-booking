@@ -154,6 +154,11 @@ export default function Navbar() {
                           </Link>
                         </li>
                         <li>
+                          <Link className="dropdown-item py-2" to="/complaints">
+                            <i className="bi bi-megaphone me-2" />Complaints
+                          </Link>
+                        </li>
+                        <li>
                           <Link className="dropdown-item py-2" to="/patient/notification-preferences">
                             <i className="bi bi-bell-slash me-2" />Notification Settings
                           </Link>

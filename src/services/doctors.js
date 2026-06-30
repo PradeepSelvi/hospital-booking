@@ -1,10 +1,16 @@
 import { supabase } from '../lib/supabase'
-import { sanitizeFormData, sanitizeInput } from '../security/sanitize'
+import { sanitizeFormData, sanitizeInput, sanitizeSearchTerm } from '../security/sanitize'
+
+// Only non-sensitive, display-safe columns are exposed to the public
+// doctor directory/search. Contact details (email/phone) are intentionally
+// excluded so they can't be scraped from the public search.
+const PUBLIC_DOCTOR_SELECT =
+  `id, specialization, qualification, experience_years, consultation_fee, photo_url, availability_status, department_id, profiles:user_id (name), departments (name, code)`
 
 export async function getDoctors(filters = {}) {
   let query = supabase
     .from('doctors')
-    .select(`*, profiles:user_id (name, email, phone), departments (name, code)`)
+    .select(PUBLIC_DOCTOR_SELECT)
     .eq('is_active', true)
 
   if (filters.specialization) query = query.ilike('specialization', `%${sanitizeInput(filters.specialization)}%`)
@@ -13,18 +19,33 @@ export async function getDoctors(filters = {}) {
   const { data, error } = await query.order('experience_years', { ascending: false })
   if (error) throw error
 
-  if (filters.name) {
-    return (data ?? []).filter(d =>
-      d.profiles?.name?.toLowerCase().includes(filters.name.toLowerCase())
-    )
+  let results = data ?? []
+
+  // Free-text search: match doctor name OR specialization OR department.
+  if (filters.search) {
+    const term = sanitizeSearchTerm(filters.search).toLowerCase()
+    if (term) {
+      results = results.filter(d =>
+        d.profiles?.name?.toLowerCase().includes(term) ||
+        d.specialization?.toLowerCase().includes(term) ||
+        d.departments?.name?.toLowerCase().includes(term)
+      )
+    }
   }
-  return data ?? []
+
+  // Filter strictly by doctor name when provided.
+  if (filters.name) {
+    const nameTerm = sanitizeSearchTerm(filters.name).toLowerCase()
+    results = results.filter(d => d.profiles?.name?.toLowerCase().includes(nameTerm))
+  }
+
+  return results
 }
 
 export async function getDoctorById(id) {
   const { data, error } = await supabase
     .from('doctors')
-    .select(`*, profiles:user_id (name, email, phone), departments (name, code)`)
+    .select(`*, profiles:user_id (name, email, phone), departments (name, code), doctor_hospitals (*)`)
     .eq('id', id)
     .single()
   if (error) throw error
@@ -116,7 +137,7 @@ export async function updateDoctorProfile(doctorId, updates) {
 
 export async function getDoctorByUserId(userId) {
   const { data, error } = await supabase
-    .from('doctors').select(`*, profiles:user_id (name, email, phone), departments (name, code)`)
+    .from('doctors').select(`*, profiles:user_id (name, email, phone), departments (name, code), doctor_hospitals (*)`)
     .eq('user_id', userId).single()
   if (error) throw error
   return data

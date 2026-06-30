@@ -87,6 +87,25 @@ export function sanitizeName(name) {
 }
 
 /**
+ * Sanitize a free-text search term before it is interpolated into a
+ * PostgREST `.or()` / `.ilike()` filter string.
+ *
+ * PostgREST treats commas, parentheses, dots and a few other characters as
+ * filter syntax. If raw user input reaches an `.or(...)` string it could alter
+ * the query (filter injection) and expose unintended rows. We strip those
+ * control characters and the `%`/`_` LIKE wildcards, then clamp the length.
+ */
+export function sanitizeSearchTerm(term, maxLength = 60) {
+  if (typeof term !== 'string') return ''
+  let clean = sanitizeInput(term)
+  // Remove PostgREST/PostgreSQL filter & LIKE control characters
+  clean = clean.replace(/[,()*%_\\:"'`]/g, ' ')
+  // Collapse whitespace and clamp length
+  clean = clean.replace(/\s{2,}/g, ' ').trim()
+  return clean.slice(0, maxLength)
+}
+
+/**
  * Sanitize numeric value — clamp to valid range.
  */
 export function sanitizeNumeric(value, min = 0, max = Infinity) {

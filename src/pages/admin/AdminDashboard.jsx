@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getDashboardStats, getWeeklyAppointmentTrend } from '../../services/admin'
 import { getApplicationStats } from '../../services/collaborate'
+import { getActiveHospitalCount } from '../../services/hospital'
 import { getAllAppointments } from '../../services/appointments'
 import { useAuth } from '../../context/AuthContext'
 import { toast } from 'react-toastify'
@@ -15,6 +16,7 @@ export default function AdminDashboard() {
   const { profile } = useAuth()
   const [stats, setStats] = useState({ totalDoctors: 0, totalPatients: 0, totalAppointments: 0, todayAppointments: 0 })
   const [pendingApps, setPendingApps] = useState(0)
+  const [totalHospitals, setTotalHospitals] = useState(0)
   const [trend, setTrend] = useState([])
   const [recentApts, setRecentApts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -36,6 +38,7 @@ export default function AdminDashboard() {
       setTrend(t)
       setRecentApts(a.slice(0, 8))
       setPendingApps(appStats.pending)
+      getActiveHospitalCount().then(setTotalHospitals).catch(() => setTotalHospitals(0))
     } catch (err) {
       toast.error('Failed to load dashboard')
     } finally {
@@ -114,6 +117,7 @@ export default function AdminDashboard() {
           { icon: 'bi-calendar-check', value: stats.totalAppointments, label: 'Total Appointments', color: 'var(--success)', bg: 'rgba(45,198,83,0.1)' },
           { icon: 'bi-calendar-day', value: stats.todayAppointments, label: "Today's Appointments", color: 'var(--warning)', bg: 'rgba(249,199,79,0.1)' },
           { icon: 'bi-people', value: pendingApps, label: 'Pending Applications', color: '#D97706', bg: 'rgba(249,199,79,0.08)' },
+          { icon: 'bi-hospital', value: totalHospitals, label: 'Active Hospitals', color: 'var(--info)', bg: 'rgba(76,201,240,0.1)' },
         ].map((stat, i) => (
           <div key={i} className="col-6 col-xl-3">
             <div className="kpi-card">

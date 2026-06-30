@@ -3,7 +3,7 @@ import { getAllPatients } from '../../services/admin'
 import { getPatientAppointments } from '../../services/appointments'
 import { toast } from 'react-toastify'
 import StatusBadge from '../../components/StatusBadge'
-import { SkeletonTable } from '../../components/SkeletonLoader'
+import { SkeletonTable, SkeletonAppointmentCards, SkeletonFullPage } from '../../components/SkeletonLoader'
 
 export default function ManagePatients() {
   const [patients, setPatients] = useState([])

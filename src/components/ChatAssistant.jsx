@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { streamChatCompletion, buildChatContext } from '../services/chatService'
+import { streamChatCompletion } from '../services/chatService'
 import { getOrCreateSession, getSessionMessages, saveMessage, startNewSession, updateSessionTitle } from '../services/chatSessions'
 import { bookAppointment } from '../services/appointments'
+import { getDoctorById, getAvailableSlots } from '../services/doctors'
+import { createComplaint, getComplaintTargets, ALLOWED_TARGETS, COMPLAINT_CATEGORIES } from '../services/complaints'
+import { submitContactMessage } from '../services/support'
 import { sanitizeInput } from '../security/sanitize'
 import { useAuth } from '../context/AuthContext'
 import './ChatAssistant.css'
@@ -44,18 +47,20 @@ function parseActionBlock(text) {
 const SEND_COOLDOWN_MS = 3000
 const MAX_INPUT_LENGTH = 2000
 const WELCOME_MSG = { id: 'welcome', role: 'assistant', content: 'Hi there! I am MediBook AI Assistant. How can I help you today?' }
+const ACTION_TYPES = ['BOOK_APPOINTMENT', 'FILE_COMPLAINT', 'MESSAGE_MANAGEMENT']
+const CATEGORY_LABELS = Object.fromEntries(COMPLAINT_CATEGORIES.map(c => [c.value, c.label]))
 
 export default function ChatAssistant() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState([WELCOME_MSG])
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [thinkingContent, setThinkingContent] = useState('')
   const [sessionId, setSessionId] = useState(null)
-  const [chatContext, setChatContext] = useState(null)
   const [pendingAction, setPendingAction] = useState(null)
   const [bookingInProgress, setBookingInProgress] = useState(false)
+  const [actionInProgress, setActionInProgress] = useState(false)
   const messagesEndRef = useRef(null)
   const abortRef = useRef(null)
   const lastSentRef = useRef(0)
@@ -73,15 +78,15 @@ export default function ChatAssistant() {
     return () => { abortRef.current?.abort() }
   }, [])
 
-  // Load session + context when chat opens and user is authenticated
+  // Load session when chat opens and user is authenticated
   useEffect(() => {
     if (isOpen && user && !contextLoadedRef.current) {
       contextLoadedRef.current = true
-      loadSessionAndContext()
+      loadSession()
     }
   }, [isOpen, user])
 
-  async function loadSessionAndContext() {
+  async function loadSession() {
     try {
       // Load or create chat session
       const session = await getOrCreateSession(user.id)
@@ -97,10 +102,6 @@ export default function ChatAssistant() {
         }))
         setMessages([WELCOME_MSG, ...formattedMessages])
       }
-
-      // Build context (patient info, doctors, appointments)
-      const ctx = await buildChatContext(user.id)
-      setChatContext(ctx)
     } catch (err) {
       if (import.meta.env.DEV) console.error('Failed to load chat session:', err)
     }
@@ -138,24 +139,49 @@ export default function ChatAssistant() {
       const action = pendingAction
       setPendingAction(null)
 
+      // ── Validate the AI-proposed booking against real data ──
+      // The action block comes from the LLM, so never trust it blindly.
+      if (!action.doctor_id || !action.date || !action.slot) {
+        throw new Error('Incomplete booking details. Please specify a doctor, date, and time.')
+      }
+
+      // 1. The doctor must exist and be active
+      let doctor
+      try {
+        doctor = await getDoctorById(action.doctor_id)
+      } catch {
+        doctor = null
+      }
+      if (!doctor || doctor.is_active === false) {
+        throw new Error('That doctor is no longer available. Please pick another from the list.')
+      }
+
+      // 2. The chosen slot must be genuinely available on that date
+      const slots = await getAvailableSlots(action.doctor_id, action.date)
+      const slotOk = slots.some(s => s.start === action.slot && !s.booked)
+      if (!slotOk) {
+        throw new Error(`The ${action.slot} slot on ${action.date} isn't available. Please choose a different time.`)
+      }
+
+      // 3. Book using AUTHORITATIVE values from the DB (not the AI's claims)
+      const doctorName = doctor.profiles?.name || action.doctor_name || 'Doctor'
+      const specialization = doctor.specialization || action.specialization || 'General'
+      const fee = doctor.consultation_fee ?? action.fee
+
       await bookAppointment({
         patient_id: user.id,
-        doctor_id: action.doctor_id,
+        doctor_id: doctor.id,
         appointment_date: action.date,
         slot_start_time: action.slot,
-        reason: `Booked via AI Assistant — ${action.specialization}`,
+        reason: `Booked via AI Assistant — ${specialization}`,
       })
 
-      const successMsg = `✅ Appointment booked successfully!\n\n**Doctor:** Dr. ${action.doctor_name}\n**Specialization:** ${action.specialization}\n**Date:** ${action.date}\n**Time:** ${action.slot}\n**Fee:** ₹${action.fee || 'N/A'}\n\nYou'll receive a confirmation notification shortly.`
+      const successMsg = `✅ Appointment booked successfully!\n\n**Doctor:** Dr. ${doctorName}\n**Specialization:** ${specialization}\n**Date:** ${action.date}\n**Time:** ${action.slot}\n**Fee:** ₹${fee ?? 'N/A'}\n\nYou'll receive a confirmation notification shortly.`
 
       const msgObj = { id: crypto.randomUUID(), role: 'assistant', content: successMsg }
       setMessages(prev => [...prev, msgObj])
 
       if (sessionId) await saveMessage(sessionId, 'assistant', successMsg)
-
-      // Refresh context to reflect the new booking
-      const ctx = await buildChatContext(user.id)
-      setChatContext(ctx)
     } catch (err) {
       const errorMsg = `❌ Booking failed: ${err.message}`
       const msgObj = { id: crypto.randomUUID(), role: 'assistant', content: errorMsg, isError: true }
@@ -172,6 +198,91 @@ export default function ChatAssistant() {
     const msgObj = { id: crypto.randomUUID(), role: 'assistant', content: cancelMsg }
     setMessages(prev => [...prev, msgObj])
     if (sessionId) saveMessage(sessionId, 'assistant', cancelMsg)
+  }
+
+  // Generic cancel for complaint / management-message confirmation cards
+  function handleActionCancel() {
+    setPendingAction(null)
+    const cancelMsg = 'Okay, cancelled. Is there anything else I can help with?'
+    const msgObj = { id: crypto.randomUUID(), role: 'assistant', content: cancelMsg }
+    setMessages(prev => [...prev, msgObj])
+    if (sessionId) saveMessage(sessionId, 'assistant', cancelMsg)
+  }
+
+  function pushAssistant(content, isError = false) {
+    const msgObj = { id: crypto.randomUUID(), role: 'assistant', content, isError }
+    setMessages(prev => [...prev, msgObj])
+    if (sessionId) saveMessage(sessionId, 'assistant', content)
+  }
+
+  async function handleComplaintConfirm() {
+    if (!pendingAction || actionInProgress) return
+    setActionInProgress(true)
+    try {
+      const a = pendingAction
+      setPendingAction(null)
+
+      const role = profile?.role
+      // Role-based authorization — same gate the Complaints page enforces.
+      if (!ALLOWED_TARGETS[role]?.includes(a.target_type)) {
+        throw new Error('Your account is not allowed to file this type of complaint.')
+      }
+
+      // Re-validate the target against what THIS user is actually allowed to
+      // file against (patients → active doctors/hospitals; doctors → their
+      // hospitals/patients; hospitals → their doctors). Never trust the AI's id.
+      let target = null
+      if (a.target_type !== 'MANAGEMENT') {
+        const opts = await getComplaintTargets(a.target_type, role, user.id)
+        target = opts.find(o => [o.doctorId, o.hospitalId, o.patientUserId].includes(a.target_id)) || null
+        if (!target) {
+          throw new Error('I could not verify who this complaint is against. Please file it from the Complaints page.')
+        }
+      }
+
+      const created = await createComplaint({
+        target_type: a.target_type,
+        target,
+        category: a.category || 'OTHER',
+        subject: a.subject,
+        description: a.description,
+      }, profile)
+
+      const ref = `#CMP-${String(created.id).padStart(5, '0')}`
+      pushAssistant(
+        `✅ Complaint filed (${ref}).\n\n**Against:** ${target?.label || 'Website Management'}\n**Category:** ${CATEGORY_LABELS[created.category] || created.category}\n**Subject:** ${created.subject}\n\nOur team will review it. You can track its status anytime on the Complaints page.`
+      )
+    } catch (err) {
+      pushAssistant(`❌ Could not file the complaint: ${err.message}`, true)
+    } finally {
+      setActionInProgress(false)
+    }
+  }
+
+  async function handleManagementConfirm() {
+    if (!pendingAction || actionInProgress) return
+    setActionInProgress(true)
+    try {
+      const a = pendingAction
+      setPendingAction(null)
+
+      // Identity is taken from the authenticated profile, never the AI.
+      await submitContactMessage({
+        name: profile?.name || 'User',
+        email: profile?.email || user.email,
+        type: 'CONTACT',
+        subject: a.subject || '',
+        message: a.message,
+      }, user.id)
+
+      pushAssistant(
+        `✅ Your message has been sent to the management team.\n\n**Subject:** ${a.subject || '(none)'}\n\nThey'll follow up by email if a response is needed.`
+      )
+    } catch (err) {
+      pushAssistant(`❌ Could not send your message: ${err.message}`, true)
+    } finally {
+      setActionInProgress(false)
+    }
   }
 
   const handleSendMessage = async (e) => {
@@ -229,7 +340,7 @@ export default function ChatAssistant() {
           }
           return newMessages
         })
-      }, abortRef.current.signal, chatContext)
+      }, abortRef.current.signal)
 
       // Parse for action blocks
       const { cleanText, action } = parseActionBlock(fullText)
@@ -250,8 +361,8 @@ export default function ChatAssistant() {
       // Persist assistant message
       if (sessionId) saveMessage(sessionId, 'assistant', cleanText || fullText)
 
-      // Show booking confirmation if action detected
-      if (action?.type === 'BOOK_APPOINTMENT') {
+      // Show confirmation card if a recognized action was detected
+      if (action?.type && ACTION_TYPES.includes(action.type)) {
         setPendingAction(action)
       }
     } catch (error) {
@@ -380,6 +491,92 @@ export default function ChatAssistant() {
                       )}
                     </button>
                     <button className="booking-btn cancel" onClick={handleBookingCancel} disabled={bookingInProgress}>
+                      <i className="bi bi-x-lg"></i> Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Complaint Confirmation Card */}
+            {pendingAction?.type === 'FILE_COMPLAINT' && (
+              <div className="chat-bubble-wrapper assistant">
+                <div className="chat-bubble-avatar">
+                  <i className="bi bi-robot"></i>
+                </div>
+                <div className="chat-booking-card">
+                  <div className="booking-card-header">
+                    <i className="bi bi-megaphone"></i> Confirm Complaint
+                  </div>
+                  <div className="booking-card-body">
+                    <div className="booking-detail">
+                      <span className="booking-label">Against</span>
+                      <span className="booking-value">
+                        {pendingAction.target_type === 'MANAGEMENT' ? 'Website Management' : (pendingAction.target_name || pendingAction.target_type)}
+                      </span>
+                    </div>
+                    <div className="booking-detail">
+                      <span className="booking-label">Category</span>
+                      <span className="booking-value">{CATEGORY_LABELS[pendingAction.category] || pendingAction.category || 'Other'}</span>
+                    </div>
+                    <div className="booking-detail">
+                      <span className="booking-label">Subject</span>
+                      <span className="booking-value">{pendingAction.subject}</span>
+                    </div>
+                    {pendingAction.description && (
+                      <div className="booking-detail">
+                        <span className="booking-label">Details</span>
+                        <span className="booking-value">{pendingAction.description.slice(0, 160)}{pendingAction.description.length > 160 ? '…' : ''}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="booking-card-actions">
+                    <button className="booking-btn confirm" onClick={handleComplaintConfirm} disabled={actionInProgress}>
+                      {actionInProgress ? (
+                        <><div className="spinner-custom" style={{ width: 14, height: 14, borderWidth: 2 }} /> Filing...</>
+                      ) : (
+                        <><i className="bi bi-check-lg"></i> File Complaint</>
+                      )}
+                    </button>
+                    <button className="booking-btn cancel" onClick={handleActionCancel} disabled={actionInProgress}>
+                      <i className="bi bi-x-lg"></i> Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Message-to-Management Confirmation Card */}
+            {pendingAction?.type === 'MESSAGE_MANAGEMENT' && (
+              <div className="chat-bubble-wrapper assistant">
+                <div className="chat-bubble-avatar">
+                  <i className="bi bi-robot"></i>
+                </div>
+                <div className="chat-booking-card">
+                  <div className="booking-card-header">
+                    <i className="bi bi-envelope-paper"></i> Send Message to Management
+                  </div>
+                  <div className="booking-card-body">
+                    <div className="booking-detail">
+                      <span className="booking-label">Subject</span>
+                      <span className="booking-value">{pendingAction.subject || '(none)'}</span>
+                    </div>
+                    {pendingAction.message && (
+                      <div className="booking-detail">
+                        <span className="booking-label">Message</span>
+                        <span className="booking-value">{pendingAction.message.slice(0, 200)}{pendingAction.message.length > 200 ? '…' : ''}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="booking-card-actions">
+                    <button className="booking-btn confirm" onClick={handleManagementConfirm} disabled={actionInProgress}>
+                      {actionInProgress ? (
+                        <><div className="spinner-custom" style={{ width: 14, height: 14, borderWidth: 2 }} /> Sending...</>
+                      ) : (
+                        <><i className="bi bi-send"></i> Send</>
+                      )}
+                    </button>
+                    <button className="booking-btn cancel" onClick={handleActionCancel} disabled={actionInProgress}>
                       <i className="bi bi-x-lg"></i> Cancel
                     </button>
                   </div>

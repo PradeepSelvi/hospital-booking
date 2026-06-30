@@ -544,6 +544,7 @@ button, a, [role="button"], .slot-btn, .calendar-day,
   border: 1px solid var(--gray-100);
   position: relative;
   overflow: hidden;
+  height: 100%;
 }
 .kpi-card::before {
   content: '';
@@ -551,6 +552,8 @@ button, a, [role="button"], .slot-btn, .calendar-day,
   top: 0; left: 0; right: 0;
   height: 4px;
   background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
 }
 .kpi-card .kpi-icon {
   width: 56px; height: 56px;
@@ -2669,3 +2672,94 @@ body.nav-open {
   .card-custom { box-shadow: none; border: 1px solid #ddd; }
   body { color: #000; background: #fff; }
 }
+
+/* ───────────────────────────────────────────────
+   Doctor Hospital Selector + Affiliations
+─────────────────────────────────────────────── */
+.hospital-selector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.hospital-selector-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-md, 10px);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.hospital-selector-item:hover {
+  background: var(--gray-50);
+  border-color: var(--gray-200);
+}
+.hospital-selector-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: rgba(0,119,182,0.08);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  overflow: hidden;
+}
+.hospital-selector-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hospital-selector-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hospital-selector-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 2px;
+}
+.hospital-selector-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+/* Affiliation list (doctor profile) */
+.doctor-affiliation-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-md, 10px);
+  background: white;
+}
+.doctor-affiliation-card + .doctor-affiliation-card { margin-top: 10px; }
+.doctor-affiliation-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: rgba(0,119,182,0.08);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  overflow: hidden;
+}
+.doctor-affiliation-icon img { width: 100%; height: 100%; object-fit: cover; }
+.doctor-affiliation-name { font-weight: 700; font-size: 14px; color: var(--dark); }
+.doctor-affiliation-meta { font-size: 12px; color: var(--gray-500); margin-top: 2px; }

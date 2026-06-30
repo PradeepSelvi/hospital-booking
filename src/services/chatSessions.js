@@ -48,7 +48,7 @@ export async function getSessionMessages(sessionId) {
     .from('chat_messages')
     .select('id, role, content, created_at')
     .eq('session_id', sessionId)
-    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
 
   if (error) throw error
   return data ?? []

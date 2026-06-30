@@ -1,85 +1,9 @@
 // chatService.js
 // Calls the Supabase Edge Function (chat-assistant) which proxies to NVIDIA NIM.
-// Now includes context building for patient history, doctors, and appointments.
+// Patient/doctor context is built SERVER-SIDE inside the edge function from the
+// authenticated user's JWT — the browser no longer builds or sends it.
 
 import { supabase } from '../lib/supabase'
-
-/**
- * Build real-time context about the patient, their appointments, and available doctors.
- * This context is injected into the AI system prompt server-side.
- *
- * @param {string} userId - The authenticated user's UUID
- * @returns {object} Context object with patient, appointments, and doctors data
- */
-export async function buildChatContext(userId) {
-  const context = { patient: null, appointments: [], doctors: [] }
-
-  try {
-    // 1. Patient profile + medical details
-    const [profileRes, patientRes] = await Promise.all([
-      supabase.from('profiles').select('name, phone, role, date_of_birth, gender, bio').eq('id', userId).single(),
-      supabase.from('patients').select('blood_group, address, emergency_contact').eq('user_id', userId).maybeSingle(),
-    ])
-
-    if (profileRes.data) {
-      context.patient = {
-        name: profileRes.data.name,
-        role: profileRes.data.role,
-        gender: profileRes.data.gender,
-        date_of_birth: profileRes.data.date_of_birth,
-        ...(patientRes.data || {}),
-      }
-    }
-
-    // 2. Recent & upcoming appointments (last 10)
-    const { data: appointments } = await supabase
-      .from('appointments')
-      .select(`
-        id, appointment_date, slot_start_time, status, reason,
-        doctors (id, specialization, consultation_fee, profiles:user_id (name))
-      `)
-      .eq('patient_id', userId)
-      .order('appointment_date', { ascending: false })
-      .limit(10)
-
-    if (appointments) {
-      context.appointments = appointments.map(apt => ({
-        date: apt.appointment_date,
-        time: apt.slot_start_time,
-        status: apt.status,
-        reason: apt.reason,
-        doctor_name: apt.doctors?.profiles?.name || 'Unknown',
-        specialization: apt.doctors?.specialization || 'General',
-        fee: apt.doctors?.consultation_fee,
-      }))
-    }
-
-    // 3. Active doctors on the platform (top 20)
-    const { data: doctors } = await supabase
-      .from('doctors')
-      .select(`id, specialization, consultation_fee, experience_years, profiles:user_id (name)`)
-      .eq('is_active', true)
-      .order('experience_years', { ascending: false })
-      .limit(20)
-
-    if (doctors) {
-      context.doctors = doctors.map(doc => ({
-        id: doc.id,
-        name: doc.profiles?.name || 'Doctor',
-        specialization: doc.specialization,
-        fee: doc.consultation_fee,
-        experience: doc.experience_years,
-      }))
-    }
-  } catch (err) {
-    // Non-fatal — chatbot works without context, just less personalized
-    if (import.meta.env.DEV) {
-      console.warn('Failed to build chat context:', err)
-    }
-  }
-
-  return context
-}
 
 /**
  * Sends messages to the chat-assistant Edge Function with streaming.
@@ -87,15 +11,23 @@ export async function buildChatContext(userId) {
  * @param {Array} messages - Array of { role, content }
  * @param {Function} onChunk - Callback({ text, reasoning })
  * @param {AbortSignal} [signal] - Optional AbortController signal
- * @param {object} [context] - Patient/doctor context from buildChatContext()
  * @param {boolean} [writeMode] - If true, use writing assistant system prompt
  */
-export async function streamChatCompletion(messages, onChunk, signal, context = null, writeMode = false) {
+export async function streamChatCompletion(messages, onChunk, signal, writeMode = false) {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
   const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Supabase configuration is missing. Check your .env file.')
+  }
+
+  // The edge function requires an authenticated user (Verify JWT is enabled).
+  // Send the user's access token — NOT the public anon key — so the request
+  // is tied to a real user and can be rate-limited server-side.
+  const { data: { session } } = await supabase.auth.getSession()
+  const accessToken = session?.access_token
+  if (!accessToken) {
+    throw new Error('Please log in to use the assistant.')
   }
 
   const edgeFunctionUrl = `${supabaseUrl}/functions/v1/chat-assistant`
@@ -110,12 +42,11 @@ export async function streamChatCompletion(messages, onChunk, signal, context = 
       signal,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'Authorization': `Bearer ${accessToken}`,
         'apikey': supabaseAnonKey,
       },
       body: JSON.stringify({
         messages: cleanMessages,
-        ...(context && { context }),
         ...(writeMode && { writeMode: true }),
       }),
     })
@@ -133,6 +64,8 @@ export async function streamChatCompletion(messages, onChunk, signal, context = 
 
     if (import.meta.env.DEV) console.error('Chat Edge Function error:', response.status, errorMessage)
 
+    if (response.status === 401) throw new Error('Your session has expired. Please log in again.')
+    if (response.status === 429) throw new Error('You are sending messages too quickly. Please wait a moment and try again.')
     if (response.status === 503) throw new Error('AI service is not configured yet. Please contact the administrator.')
     if (response.status === 504) throw new Error('The AI is taking too long to respond. Please try a shorter message.')
     throw new Error(errorMessage)

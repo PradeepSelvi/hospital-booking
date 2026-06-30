@@ -20,6 +20,7 @@ const Register = lazy(() => import('./pages/auth/Register'))
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'))
 const DoctorSearch = lazy(() => import('./pages/patient/DoctorSearch'))
 const DoctorProfile = lazy(() => import('./pages/patient/DoctorProfile'))
+const SpecializationDetail = lazy(() => import('./pages/SpecializationDetail'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 // Collaborate Pages
@@ -35,6 +36,7 @@ const OnboardingWizard = lazy(() => import('./pages/onboarding/OnboardingWizard'
 
 // Shared Pages
 const NotificationCenter = lazy(() => import('./pages/NotificationCenter'))
+const Complaints = lazy(() => import('./pages/Complaints'))
 
 // Patient Pages
 const PatientDashboard = lazy(() => import('./pages/patient/PatientDashboard'))
@@ -53,12 +55,21 @@ const DoctorProfileEdit = lazy(() => import('./pages/doctor/DoctorProfileEdit'))
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const ManageDoctors = lazy(() => import('./pages/admin/ManageDoctors'))
+const ManageHospitals = lazy(() => import('./pages/admin/ManageHospitals'))
 const ManagePatients = lazy(() => import('./pages/admin/ManagePatients'))
 const AdminAppointments = lazy(() => import('./pages/admin/AdminAppointments'))
 const Reports = lazy(() => import('./pages/admin/Reports'))
 const AdminWhatsAppPanel = lazy(() => import('./pages/admin/AdminWhatsAppPanel'))
 const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'))
 const AdminCollaborate = lazy(() => import('./pages/admin/AdminCollaborate'))
+const AdminComplaints = lazy(() => import('./pages/admin/AdminComplaints'))
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'))
+
+// Hospital Pages
+const HospitalLayout = lazy(() => import('./pages/hospital/HospitalLayout'))
+const HospitalDashboard = lazy(() => import('./pages/hospital/HospitalDashboard'))
+const HospitalProfileEdit = lazy(() => import('./pages/hospital/HospitalProfileEdit'))
+const HospitalDoctors = lazy(() => import('./pages/hospital/HospitalDoctors'))
 
 export default function App() {
   const [splashDone, setSplashDone] = useState(false)
@@ -93,6 +104,7 @@ export default function App() {
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/doctors" element={<DoctorSearch />} />
                   <Route path="/doctors/:id" element={<DoctorProfile />} />
+                  <Route path="/specializations/:slug" element={<SpecializationDetail />} />
                   <Route path="/collaborate" element={<CollaborateApplication />} />
                   <Route path="/collaborate/status" element={<ApplicationStatus />} />
 
@@ -111,6 +123,11 @@ export default function App() {
                   <Route path="/notifications" element={
                     <ProtectedRoute allowedRoles={['PATIENT', 'DOCTOR', 'ADMIN']}>
                       <NotificationCenter />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/complaints" element={
+                    <ProtectedRoute allowedRoles={['PATIENT', 'DOCTOR', 'HOSPITAL']}>
+                      <Complaints />
                     </ProtectedRoute>
                   } />
 
@@ -156,12 +173,26 @@ export default function App() {
                   }>
                     <Route path="dashboard" element={<AdminDashboard />} />
                     <Route path="doctors" element={<ManageDoctors />} />
+                    <Route path="hospitals" element={<ManageHospitals />} />
                     <Route path="patients" element={<ManagePatients />} />
                     <Route path="appointments" element={<AdminAppointments />} />
                     <Route path="reports" element={<Reports />} />
                     <Route path="whatsapp" element={<AdminWhatsAppPanel />} />
                     <Route path="collaborate" element={<AdminCollaborate />} />
+                    <Route path="complaints" element={<AdminComplaints />} />
+                    <Route path="users" element={<AdminUsers />} />
                     <Route path="profile" element={<AdminProfile />} />
+                  </Route>
+
+                  {/* ── Hospital Routes (nested layout) ── */}
+                  <Route path="/hospital" element={
+                    <ProtectedRoute allowedRoles={['HOSPITAL']}>
+                      <HospitalLayout />
+                    </ProtectedRoute>
+                  }>
+                    <Route path="dashboard" element={<HospitalDashboard />} />
+                    <Route path="profile" element={<HospitalProfileEdit />} />
+                    <Route path="doctors" element={<HospitalDoctors />} />
                   </Route>
 
                   {/* ── 404 ── */}
