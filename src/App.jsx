@@ -43,11 +43,15 @@ const PatientDashboard = lazy(() => import('./pages/patient/PatientDashboard'))
 const MyAppointments = lazy(() => import('./pages/patient/MyAppointments'))
 const NotificationPreferences = lazy(() => import('./pages/patient/NotificationPreferences'))
 const PatientProfile = lazy(() => import('./pages/patient/PatientProfile'))
+const MedicalHistory = lazy(() => import('./pages/patient/MedicalHistory'))
+const PatientMessages = lazy(() => import('./pages/patient/PatientMessages'))
 
 // Doctor Pages
 const DoctorLayout = lazy(() => import('./pages/doctor/DoctorLayout'))
 const DoctorDashboard = lazy(() => import('./pages/doctor/DoctorDashboard'))
 const DoctorAppointments = lazy(() => import('./pages/doctor/DoctorAppointments'))
+const DoctorPatients = lazy(() => import('./pages/doctor/DoctorPatients'))
+const DoctorMessages = lazy(() => import('./pages/doctor/DoctorMessages'))
 const DoctorAvailability = lazy(() => import('./pages/doctor/DoctorAvailability'))
 const DoctorProfileEdit = lazy(() => import('./pages/doctor/DoctorProfileEdit'))
 
@@ -152,6 +156,16 @@ export default function App() {
                       <PatientProfile />
                     </ProtectedRoute>
                   } />
+                  <Route path="/patient/medical-history" element={
+                    <ProtectedRoute allowedRoles={['PATIENT']}>
+                      <MedicalHistory />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/patient/messages" element={
+                    <ProtectedRoute allowedRoles={['PATIENT']}>
+                      <PatientMessages />
+                    </ProtectedRoute>
+                  } />
 
                   {/* ── Doctor Routes (nested layout) ── */}
                   <Route path="/doctor" element={
@@ -161,6 +175,8 @@ export default function App() {
                   }>
                     <Route path="dashboard" element={<DoctorDashboard />} />
                     <Route path="appointments" element={<DoctorAppointments />} />
+                    <Route path="patients" element={<DoctorPatients />} />
+                    <Route path="messages" element={<DoctorMessages />} />
                     <Route path="availability" element={<DoctorAvailability />} />
                     <Route path="profile" element={<DoctorProfileEdit />} />
                   </Route>

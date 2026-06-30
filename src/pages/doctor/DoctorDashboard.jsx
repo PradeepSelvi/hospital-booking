@@ -40,11 +40,15 @@ export default function DoctorDashboard() {
 
   async function handleComplete(aptId) {
     try {
-      await completeAppointment(aptId)
-      toast.success('Appointment marked as completed')
+      const freed = await completeAppointment(aptId)
+      if (freed?.available_from) {
+        toast.success(`Completed. Slot freed from ${freed.available_from.substring(0, 5)} — waiting patients notified.`)
+      } else {
+        toast.success('Appointment marked as completed')
+      }
       loadData()
     } catch (err) {
-      toast.error('Failed to update appointment')
+      toast.error(err.message || 'Failed to update appointment')
     }
   }
 

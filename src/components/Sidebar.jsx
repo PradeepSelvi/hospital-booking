@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useState, useEffect } from 'react'
 import { getApplicationStats } from '../services/collaborate'
@@ -6,6 +6,8 @@ import { getApplicationStats } from '../services/collaborate'
 const DOCTOR_MENU = [
   { to: '/doctor/dashboard', icon: 'bi-grid-1x2-fill', label: 'Dashboard' },
   { to: '/doctor/appointments', icon: 'bi-calendar2-check', label: 'Appointments' },
+  { to: '/doctor/patients', icon: 'bi-people', label: 'Patients' },
+  { to: '/doctor/messages', icon: 'bi-chat-dots', label: 'Messages' },
   { to: '/doctor/availability', icon: 'bi-clock-history', label: 'My Schedule' },
   { to: '/doctor/profile', icon: 'bi-person-badge', label: 'Profile' },
   { to: '/complaints', icon: 'bi-megaphone', label: 'Complaints' },
@@ -45,6 +47,12 @@ export default function Sidebar({ role, collapsed, onToggleCollapse }) {
   const isCollapsed = collapsed !== undefined ? collapsed : internalCollapsed
   const toggleCollapse = onToggleCollapse || (() => setInternalCollapsed(prev => !prev))
 
+  // Mobile drawer (the sidebar is off-canvas below 768px)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const location = useLocation()
+  // Close the drawer whenever the route changes.
+  useEffect(() => { setMobileOpen(false) }, [location.pathname])
+
   // Auto-collapse on medium screens
   useEffect(() => {
     const handleResize = () => {
@@ -74,7 +82,29 @@ export default function Sidebar({ role, collapsed, onToggleCollapse }) {
   const initial = profile?.name?.charAt(0)?.toUpperCase() ?? '?'
 
   return (
-    <div className={`sidebar ${isCollapsed ? 'collapsed' : ''}`} role="navigation" aria-label="Sidebar navigation">
+    <>
+      {/* Mobile hamburger — only visible on small screens */}
+      <button
+        className="sidebar-mobile-toggle d-lg-none"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Open menu"
+        style={{
+          position: 'fixed', top: 12, left: 12, zIndex: 1000,
+          width: 42, height: 42, borderRadius: 10, border: 'none',
+          background: 'var(--primary)', color: 'white', fontSize: 20,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+        }}
+      >
+        <i className="bi bi-list" />
+      </button>
+
+      {/* Backdrop when the drawer is open on mobile */}
+      {mobileOpen && (
+        <div className="overlay d-lg-none" onClick={() => setMobileOpen(false)} aria-hidden="true" />
+      )}
+
+      <div className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${mobileOpen ? 'open' : ''}`} role="navigation" aria-label="Sidebar navigation">
       {/* Collapse toggle button */}
       <button
         className="sidebar-collapse-btn d-none d-lg-flex"
@@ -139,5 +169,6 @@ export default function Sidebar({ role, collapsed, onToggleCollapse }) {
         </button>
       </div>
     </div>
+    </>
   )
 }

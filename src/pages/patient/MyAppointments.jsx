@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getPatientAppointments, cancelAppointment } from '../../services/appointments'
+import { getOrCreateConversation } from '../../services/chat'
 import { useAuth } from '../../context/AuthContext'
 import { toast } from 'react-toastify'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import StatusBadge from '../../components/StatusBadge'
+import AppointmentRecordControls from '../../components/AppointmentRecordControls'
 import { SkeletonAppointmentCards } from '../../components/SkeletonLoader'
 
 export default function MyAppointments() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('upcoming')
@@ -30,6 +33,15 @@ export default function MyAppointments() {
       toast.error('Failed to load appointments')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleMessage(apt) {
+    try {
+      const conv = await getOrCreateConversation(user.id, apt.doctor_id)
+      navigate('/patient/messages', { state: { conversationId: conv.id } })
+    } catch (err) {
+      toast.error(err.message || 'Could not open chat.')
     }
   }
 
@@ -183,6 +195,16 @@ export default function MyAppointments() {
                       <i className="bi bi-x-circle" /> Cancel Appointment
                     </button>
                   )}
+
+                  <AppointmentRecordControls appointment={apt} patientId={user.id} />
+
+                  <button
+                    className="btn-outline-custom w-100 mt-2"
+                    style={{ padding: '8px 16px', fontSize: 13 }}
+                    onClick={() => handleMessage(apt)}
+                  >
+                    <i className="bi bi-chat-dots" /> Message Doctor
+                  </button>
                 </div>
               </div>
             ))}

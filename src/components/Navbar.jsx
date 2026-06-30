@@ -104,6 +104,12 @@ export default function Navbar() {
                     <Link to="/patient/appointments" className={`nav-link-custom ${isActive('/patient/appointments') ? 'active' : ''}`}>
                       My Appointments
                     </Link>
+                    <Link to="/patient/medical-history" className={`nav-link-custom ${isActive('/patient/medical-history') ? 'active' : ''}`}>
+                      Medical History
+                    </Link>
+                    <Link to="/patient/messages" className={`nav-link-custom ${isActive('/patient/messages') ? 'active' : ''}`}>
+                      Messages
+                    </Link>
                   </>
                 )}
                 {role === 'DOCTOR' && (
@@ -151,6 +157,11 @@ export default function Navbar() {
                         <li>
                           <Link className="dropdown-item py-2" to="/patient/profile">
                             <i className="bi bi-person-circle me-2" />My Profile
+                          </Link>
+                        </li>
+                        <li>
+                          <Link className="dropdown-item py-2" to="/patient/medical-history">
+                            <i className="bi bi-file-medical me-2" />Medical History
                           </Link>
                         </li>
                         <li>

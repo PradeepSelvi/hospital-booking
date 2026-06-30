@@ -4,6 +4,7 @@ import { getDoctorByUserId } from '../../services/doctors'
 import { useAuth } from '../../context/AuthContext'
 import { toast } from 'react-toastify'
 import StatusBadge from '../../components/StatusBadge'
+import ConsultationModal from '../../components/ConsultationModal'
 import { SkeletonTable } from '../../components/SkeletonLoader'
 
 export default function DoctorAppointments() {
@@ -15,6 +16,7 @@ export default function DoctorAppointments() {
   const [filterDate, setFilterDate] = useState('')
   const [cancelModal, setCancelModal] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
+  const [consultModal, setConsultModal] = useState(null)
 
   useEffect(() => {
     if (user) loadData()
@@ -38,11 +40,15 @@ export default function DoctorAppointments() {
 
   async function handleComplete(id) {
     try {
-      await completeAppointment(id, doctorRecord?.id)
-      toast.success('Marked as completed')
+      const freed = await completeAppointment(id)
+      if (freed?.available_from) {
+        toast.success(`Completed. Slot freed from ${freed.available_from.substring(0, 5)} — waiting patients notified.`)
+      } else {
+        toast.success('Marked as completed')
+      }
       loadData()
     } catch (err) {
-      toast.error('Failed to update')
+      toast.error(err.message || 'Failed to update')
     }
   }
 
@@ -182,6 +188,13 @@ export default function DoctorAppointments() {
                           <>
                             <button
                               className="btn-ghost"
+                              style={{ padding: '4px 10px', fontSize: 12, color: 'var(--primary)' }}
+                              onClick={() => setConsultModal(apt)}
+                            >
+                              <i className="bi bi-clipboard2-pulse" /> Consult
+                            </button>
+                            <button
+                              className="btn-ghost"
                               style={{ padding: '4px 10px', fontSize: 12, color: 'var(--success)' }}
                               onClick={() => handleComplete(apt.id)}
                             >
@@ -196,6 +209,15 @@ export default function DoctorAppointments() {
                             </button>
                           </>
                         )}
+                        {apt.status === 'COMPLETED' && (
+                          <button
+                            className="btn-ghost"
+                            style={{ padding: '4px 10px', fontSize: 12, color: 'var(--primary)' }}
+                            onClick={() => setConsultModal(apt)}
+                          >
+                            <i className="bi bi-journal-text" /> Notes
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -205,6 +227,15 @@ export default function DoctorAppointments() {
           </div>
         )}
       </div>
+
+      {/* Consultation Modal */}
+      {consultModal && (
+        <ConsultationModal
+          appointment={consultModal}
+          onClose={() => setConsultModal(null)}
+          onCompleted={loadData}
+        />
+      )}
 
       {/* Cancel Modal */}
       {cancelModal && (
