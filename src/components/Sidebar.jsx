@@ -20,6 +20,7 @@ const ADMIN_MENU = [
   { to: '/admin/hospitals', icon: 'bi-hospital', label: 'Manage Hospitals' },
   { to: '/admin/patients', icon: 'bi-person-lines-fill', label: 'Patients' },
   { to: '/admin/appointments', icon: 'bi-calendar2-week', label: 'Appointments' },
+  { to: '/admin/payments', icon: 'bi-wallet2', label: 'Payments' },
   { to: '/admin/complaints', icon: 'bi-megaphone', label: 'Complaints' },
   { to: '/admin/users', icon: 'bi-person-vcard', label: 'Users' },
   { to: '/admin/reports', icon: 'bi-graph-up-arrow', label: 'Reports' },
@@ -137,6 +138,7 @@ export default function Sidebar({ role, collapsed, onToggleCollapse }) {
             {item.hasBadge && pendingCount > 0 && !isCollapsed && (
               <span className="sidebar-collab-badge">{pendingCount}</span>
             )}
+            
           </NavLink>
         ))}
       </nav>

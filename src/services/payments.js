@@ -68,6 +68,61 @@ export async function payOffline(appointmentId) {
 }
 
 // ─────────────────────────────────────────────
+// Admin: track & manage payments
+// ─────────────────────────────────────────────
+
+/**
+ * List payments for the admin panel with related appointment/patient/doctor
+ * info. Admin read access is enforced by RLS (payments_admin_read).
+ * @param {object} filters - { status?: 'PENDING'|'PAID'|'FAILED'|'REFUNDED', method?: 'ONLINE'|'OFFLINE' }
+ */
+export async function getAllPayments(filters = {}) {
+  let query = supabase
+    .from('payments')
+    .select(`
+      *,
+      appointment:appointments!payments_appointment_id_fkey (appointment_date, slot_start_time, status),
+      patient:profiles!payments_patient_id_fkey (name, email, phone),
+      doctor:doctors!payments_doctor_id_fkey (specialization, profiles:user_id (name))
+    `)
+    .order('requested_at', { ascending: false })
+
+  if (filters.status) query = query.eq('status', filters.status)
+  if (filters.method) query = query.eq('method', filters.method)
+
+  const { data, error } = await query
+  if (error) throw error
+  return data ?? []
+}
+
+/** Admin: aggregate payment statistics (server-side, admin-only RPC). */
+export async function getPaymentStats() {
+  const { data, error } = await supabase.rpc('admin_payment_stats')
+  if (error) throw new Error(error.message || 'Could not load payment stats.')
+  return data
+}
+
+/** Admin: mark a stuck PENDING payment as FAILED (audited, server-side). */
+export async function adminFailPayment(paymentId, reason) {
+  const { data, error } = await supabase.rpc('admin_fail_payment', {
+    p_payment_id: paymentId,
+    p_reason: reason,
+  })
+  if (error) throw new Error(error.message || 'Could not update the payment.')
+  return data
+}
+
+/** Admin: record a REFUND against a PAID payment (audited, server-side). */
+export async function adminRefundPayment(paymentId, reason) {
+  const { data, error } = await supabase.rpc('admin_refund_payment', {
+    p_payment_id: paymentId,
+    p_reason: reason,
+  })
+  if (error) throw new Error(error.message || 'Could not refund the payment.')
+  return data
+}
+
+// ─────────────────────────────────────────────
 // Online (Razorpay)
 // ─────────────────────────────────────────────
 

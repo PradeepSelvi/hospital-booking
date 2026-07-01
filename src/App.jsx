@@ -1,5 +1,30 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { lazy, Suspense, useState, useCallback } from 'react'
+import { lazy as reactLazy, Suspense, useState, useCallback, useEffect } from 'react'
+
+/**
+ * Lazy import with self-healing against stale-chunk 404s.
+ *
+ * On a new deployment the content-hashed chunk filenames change and the old
+ * ones are removed from the production build. A tab that still holds the old
+ * index.html (or was open across the deploy) will request a chunk URL that now
+ * 404s, which makes React.lazy's dynamic import() reject and the route fail to
+ * render. When that happens we force a ONE-TIME full reload so the browser
+ * fetches fresh HTML pointing at the current chunk names. A sessionStorage
+ * guard prevents an infinite reload loop if the chunk is genuinely broken.
+ */
+function lazy(factory) {
+  return reactLazy(() =>
+    factory().catch((err) => {
+      const KEY = 'chunk_reload_once'
+      if (!sessionStorage.getItem(KEY)) {
+        sessionStorage.setItem(KEY, '1')
+        window.location.reload()
+        return new Promise(() => {}) // hold render until the reload happens
+      }
+      throw err // already retried once — let the ErrorBoundary handle it
+    })
+  )
+}
 import { AuthProvider } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
 import { DeviceProvider } from './context/DeviceContext'
@@ -64,6 +89,7 @@ const ManageHospitals = lazy(() => import('./pages/admin/ManageHospitals'))
 const ManagePatients = lazy(() => import('./pages/admin/ManagePatients'))
 const AdminAppointments = lazy(() => import('./pages/admin/AdminAppointments'))
 const Reports = lazy(() => import('./pages/admin/Reports'))
+const AdminPayments = lazy(() => import('./pages/admin/AdminPayments'))
 const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'))
 const AdminCollaborate = lazy(() => import('./pages/admin/AdminCollaborate'))
 const AdminComplaints = lazy(() => import('./pages/admin/AdminComplaints'))
@@ -81,6 +107,12 @@ export default function App() {
 
   const handleSplashComplete = useCallback(() => {
     setSplashDone(true)
+  }, [])
+
+  // The app mounted successfully → chunks are healthy. Clear the one-shot
+  // chunk-reload guard so a FUTURE deploy can trigger its own recovery reload.
+  useEffect(() => {
+    sessionStorage.removeItem('chunk_reload_once')
   }, [])
 
   return (
@@ -192,6 +224,7 @@ export default function App() {
                     <Route path="hospitals" element={<ManageHospitals />} />
                     <Route path="patients" element={<ManagePatients />} />
                     <Route path="appointments" element={<AdminAppointments />} />
+                    <Route path="payments" element={<AdminPayments />} />
                     <Route path="reports" element={<Reports />} />
                     <Route path="collaborate" element={<AdminCollaborate />} />
                     <Route path="complaints" element={<AdminComplaints />} />

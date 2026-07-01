@@ -124,14 +124,13 @@ export async function submitApplication(formData) {
  * Check if an email already has an active application or registered account.
  */
 export async function checkEmailExists(email) {
-  // Check profiles table for existing accounts
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('email', email.toLowerCase().trim())
-    .maybeSingle()
+  // Existing account check via a SECURITY DEFINER RPC (boolean only) so the
+  // public form never needs read access to the profiles table.
+  const { data: hasAccount } = await supabase.rpc('email_has_account', {
+    p_email: email,
+  })
 
-  if (profileData) {
+  if (hasAccount) {
     return { exists: true, reason: 'An account with this email already exists.' }
   }
 

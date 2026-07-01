@@ -181,3 +181,37 @@ export async function getWeeklyAppointmentTrend() {
 
   return trend
 }
+
+// ─────────────────────────────────────────────
+// Reports & Analytics (admin-only, server-aggregated)
+// ─────────────────────────────────────────────
+
+/**
+ * Full analytics payload for a date range, computed server-side by the
+ * admin-only `admin_report_overview` RPC (aggregates only — no patient PII).
+ * @param {string} from - ISO date (YYYY-MM-DD)
+ * @param {string} to   - ISO date (YYYY-MM-DD)
+ */
+export async function getReportOverview(from, to) {
+  const { data, error } = await supabase.rpc('admin_report_overview', {
+    p_from: from,
+    p_to: to,
+  })
+  if (error) throw new Error(error.message || 'Could not load the report.')
+  return data
+}
+
+/**
+ * Active hospitals that have map coordinates, for the report map.
+ * Returns [{ id, name, city, latitude, longitude }].
+ */
+export async function getHospitalGeoPoints() {
+  const { data, error } = await supabase
+    .from('hospitals')
+    .select('id, name, city, latitude, longitude')
+    .eq('is_active', true)
+    .not('latitude', 'is', null)
+    .not('longitude', 'is', null)
+  if (error) throw error
+  return (data ?? []).filter(h => h.latitude != null && h.longitude != null)
+}

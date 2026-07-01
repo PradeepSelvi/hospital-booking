@@ -326,9 +326,11 @@ export default function ChatAssistant() {
         .map(({ role, content }) => ({ role, content }))
 
       let fullText = ''
+      let lastReasoning = ''
 
       await streamChatCompletion(apiMessages, ({ text, reasoning }) => {
         fullText = text
+        if (reasoning) lastReasoning = reasoning
         setThinkingContent(reasoning)
         setMessages(prev => {
           const newMessages = [...prev]
@@ -345,13 +347,31 @@ export default function ChatAssistant() {
       // Parse for action blocks
       const { cleanText, action } = parseActionBlock(fullText)
 
+      // Decide what to render. Guard against silent empties:
+      //  • reasoning-only responses (content channel empty) → show the reasoning
+      //  • action-only responses (no prose) → show a friendly prompt, not raw JSON
+      //  • truly empty → a clear, non-silent fallback (flagged as error)
+      let finalText = (cleanText || '').trim()
+      let finalIsError = false
+      if (!finalText) {
+        if (action) {
+          finalText = "Here are the details below — please review and confirm."
+        } else if (lastReasoning.trim()) {
+          finalText = lastReasoning.trim()
+        } else {
+          finalText = "⚠️ I couldn't generate a response. Please rephrase your question or try again."
+          finalIsError = true
+        }
+      }
+
       // Finalize message
       setMessages(prev => {
         const newMessages = [...prev]
         newMessages[newMessages.length - 1] = {
           id: assistantId,
           role: 'assistant',
-          content: cleanText || fullText,
+          content: finalText,
+          isError: finalIsError,
           isStreaming: false,
         }
         return newMessages
@@ -359,7 +379,7 @@ export default function ChatAssistant() {
       setThinkingContent('')
 
       // Persist assistant message
-      if (sessionId) saveMessage(sessionId, 'assistant', cleanText || fullText)
+      if (sessionId) saveMessage(sessionId, 'assistant', finalText)
 
       // Show confirmation card if a recognized action was detected
       if (action?.type && ACTION_TYPES.includes(action.type)) {
