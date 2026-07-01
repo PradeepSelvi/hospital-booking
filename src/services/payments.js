@@ -70,9 +70,35 @@ export async function payOffline(appointmentId) {
 // ─────────────────────────────────────────────
 // Online (Razorpay)
 // ─────────────────────────────────────────────
+
+/**
+ * Build the Authorization header from the *current* session token.
+ *
+ * We attach the user's access token explicitly rather than relying on
+ * supabase.functions.invoke to pick it up implicitly. On a freshly loaded
+ * production build the functions client's auth header can lag behind the
+ * restored session, which makes the edge function see no user and return
+ * "Authentication required." Fetching the session here guarantees a valid
+ * token is sent (and refreshes it if it's about to expire).
+ */
+async function authHeaders() {
+  let { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) {
+    // Try a refresh in case the token just expired.
+    const refreshed = await supabase.auth.refreshSession()
+    session = refreshed.data?.session
+  }
+  if (!session?.access_token) {
+    throw new Error('Your session has expired. Please sign in again and retry the payment.')
+  }
+  return { Authorization: `Bearer ${session.access_token}` }
+}
+
 async function createOrder(appointmentId) {
+  const headers = await authHeaders()
   const { data, error } = await supabase.functions.invoke('razorpay-create-order', {
     body: { appointmentId },
+    headers,
   })
   if (error) {
     const msg = (await error?.context?.json?.().catch(() => null))?.error
@@ -83,10 +109,15 @@ async function createOrder(appointmentId) {
 }
 
 async function verifyPayment(payload) {
+  const headers = await authHeaders()
   const { data, error } = await supabase.functions.invoke('razorpay-verify-payment', {
     body: payload,
+    headers,
   })
-  if (error) throw new Error(error.message || 'Payment verification failed.')
+  if (error) {
+    const msg = (await error?.context?.json?.().catch(() => null))?.error
+    throw new Error(msg || error.message || 'Payment verification failed.')
+  }
   if (!data?.verified) throw new Error(data?.error || 'Payment could not be verified.')
   return data // { verified, receipt_number, appointment_id }
 }
