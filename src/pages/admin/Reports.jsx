@@ -287,19 +287,53 @@ export default function Reports() {
       <div class="footer">MediBook — generated ${esc(generated)}. This document may contain sensitive operational data.</div>
       </body></html>`
 
-    const win = window.open('', '_blank', 'noopener,noreferrer,width=1024,height=768')
-    if (!win) {
-      toast.error('Popup blocked. Allow popups to download the PDF report.')
+    // Print via a hidden iframe — this avoids popup blockers entirely
+    // (window.open with 'noopener' returns null and gets blocked). The iframe
+    // is same-origin so we can write the report HTML and trigger its print
+    // dialog, then clean it up afterwards.
+    const iframe = document.createElement('iframe')
+    iframe.setAttribute('aria-hidden', 'true')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    document.body.appendChild(iframe)
+
+    const cleanup = () => {
+      // Remove the iframe once the print dialog has been dismissed.
+      if (iframe.parentNode) iframe.parentNode.removeChild(iframe)
+    }
+
+    const doc = iframe.contentWindow?.document
+    if (!doc) {
+      cleanup()
+      toast.error('Could not generate the PDF report. Please try again.')
       return
     }
-    win.document.open()
-    win.document.write(html)
-    win.document.close()
-    // Give images a moment to lay out, then invoke the print dialog.
-    win.focus()
-    setTimeout(() => {
-      win.print()
-    }, 400)
+
+    doc.open()
+    doc.write(html)
+    doc.close()
+
+    // Wait for the document (and chart images) to finish laying out, then
+    // trigger the print dialog. Clean up after the dialog closes.
+    const triggerPrint = () => {
+      try {
+        const win = iframe.contentWindow
+        win.focus()
+        win.onafterprint = cleanup
+        win.print()
+        // Safety net in case onafterprint never fires (some browsers).
+        setTimeout(cleanup, 60000)
+      } catch (err) {
+        cleanup()
+        toast.error('Could not open the print dialog. Please try again.')
+      }
+    }
+
+    setTimeout(triggerPrint, 400)
   }
 
   // ── Derived ──

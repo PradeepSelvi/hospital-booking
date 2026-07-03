@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { toast } from 'react-toastify'
 import {
@@ -14,6 +14,7 @@ import {
 import { getDepartments } from '../../services/admin'
 import { SkeletonTable } from '../../components/SkeletonLoader'
 import { getPasswordStrength, RULES } from '../../security/validators'
+import { checkPasswordPwned } from '../../security/pwnedPassword'
 import '../../pages/collaborate/CollaborateApplication.css'
 
 const STATUS_CONFIG = {
@@ -44,6 +45,9 @@ export default function AdminCollaborate() {
   const [approvePassword, setApprovePassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [approving, setApproving] = useState(false)
+  // Breached-password check (Have I Been Pwned, k-anonymity — client-side).
+  const [pwnedCheck, setPwnedCheck] = useState({ status: 'idle', count: 0 }) // idle|checking|safe|pwned
+  const pwnedRef = useRef({ password: '', pwned: false })
 
   // Reject modal
   const [showRejectModal, setShowRejectModal] = useState(false)
@@ -119,7 +123,22 @@ export default function AdminCollaborate() {
   function openApproveModal() {
     setApprovePassword('')
     setShowPassword(false)
+    setPwnedCheck({ status: 'idle', count: 0 })
+    pwnedRef.current = { password: '', pwned: false }
     setShowApproveModal(true)
+  }
+
+  // Check the chosen password against known breaches (HIBP, fails open).
+  async function runPwnedCheck(pw) {
+    if (!pw || pw.length < RULES.password.minLength) {
+      setPwnedCheck({ status: 'idle', count: 0 })
+      return
+    }
+    if (pwnedRef.current.password === pw) return // already checked this password
+    setPwnedCheck({ status: 'checking', count: 0 })
+    const res = await checkPasswordPwned(pw)
+    pwnedRef.current = { password: pw, pwned: res.pwned }
+    setPwnedCheck({ status: res.pwned ? 'pwned' : 'safe', count: res.count })
   }
 
   async function handleApprove() {
@@ -138,6 +157,25 @@ export default function AdminCollaborate() {
 
     try {
       setApproving(true)
+
+      // ── Reject passwords known to be in breaches (HIBP). Reuse the blur
+      //    result if the password is unchanged. Fails open on errors. ──
+      let pwned = false
+      let pwnedCount = 0
+      if (pwnedRef.current.password === approvePassword) {
+        pwned = pwnedRef.current.pwned
+      } else {
+        const pr = await checkPasswordPwned(approvePassword)
+        pwnedRef.current = { password: approvePassword, pwned: pr.pwned }
+        pwned = pr.pwned
+        pwnedCount = pr.count
+      }
+      if (pwned) {
+        setPwnedCheck({ status: 'pwned', count: pwnedCount })
+        toast.error('This password has appeared in known data breaches. Please choose a different one.')
+        return
+      }
+
       const result = await approveApplication(selectedApp.id, approvePassword, user.id)
       toast.success(`Account created for ${result.email}! Login credentials are active.`)
       setShowApproveModal(false)
@@ -178,6 +216,14 @@ export default function AdminCollaborate() {
   }
 
   const strength = getPasswordStrength(approvePassword)
+  const passwordReqs = [
+    { key: 'length', label: `At least ${RULES.password.minLength} characters`, met: !!strength.checks.length8 },
+    { key: 'uppercase', label: 'One uppercase letter', met: !!strength.checks.uppercase },
+    { key: 'lowercase', label: 'One lowercase letter', met: !!strength.checks.lowercase },
+    { key: 'digit', label: 'One number', met: !!strength.checks.digit },
+    { key: 'special', label: 'One special character', met: !!strength.checks.special },
+  ]
+  const passwordMeetsPolicy = passwordReqs.every(r => r.met)
 
   async function handleViewDocument() {
     if (!selectedApp?.documents_url) return
@@ -662,7 +708,11 @@ export default function AdminCollaborate() {
                   className="form-input-custom"
                   placeholder="Set a strong password"
                   value={approvePassword}
-                  onChange={e => setApprovePassword(e.target.value)}
+                  onChange={e => {
+                    setApprovePassword(e.target.value)
+                    setPwnedCheck({ status: 'idle', count: 0 })
+                  }}
+                  onBlur={e => runPwnedCheck(e.target.value)}
                   maxLength={128}
                   style={{ paddingRight: 44 }}
                   autoFocus
@@ -682,6 +732,36 @@ export default function AdminCollaborate() {
                     <div className="password-strength-fill" style={{ width: `${(strength.level / 5) * 100}%`, background: strength.color }} />
                   </div>
                   <span className="password-strength-label" style={{ color: strength.color }}>{strength.label}</span>
+
+                  {/* Live requirement checklist — clarifies exactly what's missing */}
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 12px' }}>
+                    {passwordReqs.map(req => (
+                      <li key={req.key} style={{ fontSize: 11.5, color: req.met ? 'var(--success)' : 'var(--gray-400)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <i className={`bi ${req.met ? 'bi-check-circle-fill' : 'bi-circle'}`} />
+                        {req.label}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Breached-password (HIBP) status */}
+                  {pwnedCheck.status === 'checking' && (
+                    <div style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div className="spinner-custom" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                      Checking against known data breaches…
+                    </div>
+                  )}
+                  {pwnedCheck.status === 'safe' && (
+                    <div style={{ fontSize: 12, color: 'var(--success)', marginTop: 8 }}>
+                      <i className="bi bi-shield-check me-1" />
+                      Not found in any known data breach.
+                    </div>
+                  )}
+                  {pwnedCheck.status === 'pwned' && (
+                    <div style={{ fontSize: 12, color: 'var(--danger)', marginTop: 8 }}>
+                      <i className="bi bi-shield-exclamation me-1" />
+                      Found in {pwnedCheck.count.toLocaleString()} known breaches. Choose a different password.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -706,7 +786,7 @@ export default function AdminCollaborate() {
               <button
                 className="btn-primary-custom flex-fill justify-content-center"
                 onClick={handleApprove}
-                disabled={approving || !approvePassword}
+                disabled={approving || !approvePassword || !passwordMeetsPolicy || pwnedCheck.status === 'checking' || pwnedCheck.status === 'pwned'}
               >
                 {approving ? (
                   <><div className="spinner-custom" style={{ width: 18, height: 18, borderWidth: 2 }} /> Creating...</>
