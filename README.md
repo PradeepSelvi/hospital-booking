@@ -7,19 +7,33 @@ Admin, Hospital** — plus email/in-app notifications and an AI assistant.
 
 ## Features
 
+### Core Features
 - **Authentication & onboarding** with role-based access (Patient / Doctor / Admin / Hospital)
 - **Doctor search** by name, specialization, and department
-- **Appointment booking** with atomic, race-safe slot reservation and a waitlist
+- **Appointment booking** with atomic, race-safe slot reservation and timezone-aware validation
 - **Early-completion freed slots** — released time is offered to waitlisted patients
-- **Medical history vault** — patients upload documents (3 per category) and a
-  health summary; doctors can view them only with per-appointment consent
+- **Medical history vault** — patients upload documents (3 per category) with granular, per-appointment consent
 - **Consultation notes** — doctors record advisories/prescriptions at closing
-- **Patient ↔ doctor chat** — realtime 1:1 messaging with a per-doctor
-  "accept new patients" toggle
-- **Complaints**, **hospital management**, and a **collaboration/onboarding**
-  flow for new doctors and hospitals
+- **Patient ↔ doctor chat** — realtime 1:1 messaging with a per-doctor "accept new patients" toggle
+- **Complaints**, **hospital management**, and a **collaboration/onboarding** flow
 - **Notifications** — in-app (realtime) and email
 - **AI assistant** for patient queries and guided booking
+- **Payment integration** — Razorpay with online/offline options and automatic settlement
+
+### Advanced Features
+- **🔄 Smart Swap Slot Exchange** — Decentralized, anonymous peer-to-peer marketplace where patients trade appointment slots. Givers who move to later slots earn co-pay discounts (10%), optimizing schedule utilization while reducing no-shows.
+- **⏱️ Live Queue & ETA Tracking** — Real-time waiting room position tracking with SMS notifications. Patients see their queue position and estimated wait time, updated every 30 seconds.
+- **🔐 Multi-Factor Authentication (MFA/TOTP)** — Time-based one-time passwords with recovery codes. Supports Google Authenticator, Authy, etc. Admin MFA reset capability with audit logging.
+- **⭐ Hospital Reviews & Ratings** — Verified patient reviews with moderation. Aggregated ratings and integration with external review platforms (Google Places).
+
+### Security Features
+- **Row Level Security (RLS)** on all tables with multi-layer policies
+- **Input sanitization** and XSS prevention across all user inputs
+- **Pwned password check** integration with Have I Been Pwned API
+- **Rate limiting** on auth endpoints (login, register, password reset)
+- **CAPTCHA** on sensitive flows (registration, login after failures)
+- **Audit logging** for medical records, payments, MFA resets, and account closures
+- **AAL2 gating** for sensitive operations (requires MFA verification)
 
 ## Tech stack
 
@@ -51,6 +65,16 @@ npm run dev
 ```
 
 The app runs at http://localhost:5173.
+
+## Documentation
+
+Comprehensive documentation is available in the `/docs` folder:
+
+- **[Features Guide](./docs/FEATURES.md)** — Detailed documentation of all features including Smart Swap, Live Queue, MFA, and more
+- **[Deployment Guide](./docs/DEPLOYMENT.md)** — Complete step-by-step production deployment instructions
+- **[Architecture Guide](./docs/ARCHITECTURE.md)** — System design, concurrency model, and technical decisions *(coming soon)*
+- **[Security Guide](./docs/SECURITY.md)** — Comprehensive security documentation *(coming soon)*
+- **[API Reference](./docs/API.md)** — RPC and endpoint documentation *(coming soon)*
 
 ## Scripts
 
@@ -85,9 +109,22 @@ The app runs at http://localhost:5173.
 
 ## Database
 
-All schema lives in **`supabase/migrations/`** as numbered, dependency-ordered
-files (`001` → `020`). That folder's `README.md` documents the order, what each
-migration does, and idempotency caveats. Apply them in order on a fresh project.
+All schema lives in **`supabase/migrations/`** as 34 numbered, dependency-ordered
+files (`001` → `034`). The migrations cover:
+
+- **001-020:** Core schema (profiles, appointments, chat, medical history, payments)
+- **021:** Medical record audit logging
+- **022:** Razorpay payment integration
+- **023-024:** Auth hardening and PII encryption
+- **025-026:** Admin payment management and reporting
+- **027-028:** MFA/TOTP with recovery codes and AAL2 gating
+- **029-030:** Hospital and place reviews/ratings
+- **031:** Pentest hardening (rate limiting, CAPTCHA, additional RLS)
+- **032:** Live queue position and ETA tracking
+- **033:** Smart Swap peer-to-peer slot exchange
+- **034:** Timezone-aware past time slot rejection
+
+Apply migrations in order on a fresh project. See `/docs/DEPLOYMENT.md` for detailed migration guide.
 
 ## Project structure
 
