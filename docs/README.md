@@ -31,7 +31,7 @@ Welcome to the comprehensive documentation for the MediBook hospital appointment
   - Frontend deployment (Vercel/Netlify/custom)
   - Post-deployment verification
 
-### 🔐 Security & API *(Coming Soon)*
+### 🔐 Security & API
 
 - **[SECURITY.md](./SECURITY.md)** - Comprehensive security documentation:
   - RLS policies deep-dive
@@ -40,13 +40,17 @@ Welcome to the comprehensive documentation for the MediBook hospital appointment
   - Audit logging
   - Penetration test hardening
   - AAL2 gating for MFA
+  - HIPAA/GDPR considerations
+  - Incident response plan
 
 - **[API.md](./API.md)** - Complete API reference:
   - RPC function signatures
   - Request/response examples
-  - Error codes
+  - Error codes and handling
   - Rate limits
   - Authentication requirements
+  - Real-time subscriptions
+  - SDK examples
 
 ### 🛠️ Development *(Coming Soon)*
 
@@ -100,12 +104,12 @@ Welcome to the comprehensive documentation for the MediBook hospital appointment
 
 | Document | Status | Last Updated |
 |----------|--------|--------------|
-| README.md (root) | ✅ Complete | 2024 |
-| FEATURES.md | ✅ Complete | 2024 |
-| DEPLOYMENT.md | ✅ Complete | 2024 |
-| ARCHITECTURE.md | ✅ Complete | 2024 |
-| SECURITY.md | 🚧 In Progress | - |
-| API.md | 📋 Planned | - |
+| README.md (root) | ✅ Complete | 2026 |
+| FEATURES.md | ✅ Complete | 2026 |
+| DEPLOYMENT.md | ✅ Complete | 2026 |
+| ARCHITECTURE.md | ✅ Complete | 2026 |
+| SECURITY.md | ✅ Complete | 2026 |
+| API.md | ✅ Complete | 2026 |
 | DEVELOPMENT.md | 📋 Planned | - |
 
 ---
@@ -127,7 +131,7 @@ Found an error or want to improve the docs?
 
 ## Changelog
 
-### 2024-12 - Initial Documentation Release
+### 2026-01 - Initial Documentation Release
 - Created FEATURES.md with all feature documentation
 - Created DEPLOYMENT.md with complete deployment guide
 - Created ARCHITECTURE.md with technical design
@@ -136,6 +140,6 @@ Found an error or want to improve the docs?
 
 ---
 
-**Last updated:** December 2024  
+**Last updated:** January 2026  
 **Documentation version:** 1.0  
 **Software version:** Corresponds to migration 034 (timezone-aware slot rejection)

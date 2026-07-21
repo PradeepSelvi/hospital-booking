@@ -92,6 +92,24 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(BUILD_ID),
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Split heavy third-party libraries into their own long-lived chunks.
+        // These change far less often than app code, so browsers can cache them
+        // across deploys, and the main entry bundle stays small.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          // Self-contained heavy libs get their own chunks. The React ecosystem
+          // (react, react-dom, router, toastify, hook-form) stays together in
+          // `vendor` to avoid circular chunk references between them.
+          if (id.includes('chart.js') || id.includes('react-chartjs-2')) return 'charts'
+          if (id.includes('@supabase')) return 'supabase'
+          return 'vendor'
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     open: true,
