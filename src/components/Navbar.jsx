@@ -107,6 +107,9 @@ export default function Navbar() {
                     <Link to="/patient/medical-history" className={`nav-link-custom ${isActive('/patient/medical-history') ? 'active' : ''}`}>
                       Medical History
                     </Link>
+                    <Link to="/patient/prescriptions" className={`nav-link-custom ${isActive('/patient/prescriptions') ? 'active' : ''}`}>
+                      Prescriptions
+                    </Link>
                     <Link to="/patient/messages" className={`nav-link-custom ${isActive('/patient/messages') ? 'active' : ''}`}>
                       Messages
                     </Link>
@@ -162,6 +165,11 @@ export default function Navbar() {
                         <li>
                           <Link className="dropdown-item py-2" to="/patient/medical-history">
                             <i className="bi bi-file-medical me-2" />Medical History
+                          </Link>
+                        </li>
+                        <li>
+                          <Link className="dropdown-item py-2" to="/patient/prescriptions">
+                            <i className="bi bi-capsule me-2" />Prescriptions
                           </Link>
                         </li>
                         <li>

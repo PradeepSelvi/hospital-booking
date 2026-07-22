@@ -77,6 +77,7 @@ const SwapMarket = lazy(() => import('./pages/patient/SwapMarket'))
 const NotificationPreferences = lazy(() => import('./pages/patient/NotificationPreferences'))
 const PatientProfile = lazy(() => import('./pages/patient/PatientProfile'))
 const MedicalHistory = lazy(() => import('./pages/patient/MedicalHistory'))
+const MyPrescriptions = lazy(() => import('./pages/patient/MyPrescriptions'))
 const PatientMessages = lazy(() => import('./pages/patient/PatientMessages'))
 
 // Doctor Pages
@@ -222,6 +223,11 @@ export default function App() {
                   <Route path="/patient/medical-history" element={
                     <ProtectedRoute allowedRoles={['PATIENT']}>
                       <MedicalHistory />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/patient/prescriptions" element={
+                    <ProtectedRoute allowedRoles={['PATIENT']}>
+                      <MyPrescriptions />
                     </ProtectedRoute>
                   } />
                   <Route path="/patient/messages" element={

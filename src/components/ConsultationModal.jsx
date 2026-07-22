@@ -5,6 +5,7 @@ import {
 } from '../services/medicalHistory'
 import { getPaymentForAppointment, requestAppointmentPayment, paiseToRupees } from '../services/payments'
 import MedicalDocumentUploader from './MedicalDocumentUploader'
+import PrescriptionEditor from './PrescriptionEditor'
 import { toast } from 'react-toastify'
 
 /**
@@ -175,6 +176,15 @@ export default function ConsultationModal({ appointment, onClose, onCompleted })
                   placeholder="Follow-up plan, tests to do, next visit..."
                   value={note.follow_up}
                   onChange={e => setNote(p => ({ ...p, follow_up: e.target.value }))} />
+              </div>
+
+              {/* Structured prescription */}
+              <h6 style={{ fontWeight: 600, marginTop: 16 }}>Prescription</h6>
+              <p style={{ fontSize: 12, color: 'var(--gray-500)', marginTop: -4, marginBottom: 10 }}>
+                Issue a structured, itemized prescription. The patient can view and download it.
+              </p>
+              <div className="mb-3">
+                <PrescriptionEditor appointment={appointment} />
               </div>
 
               {/* Billing / payment */}
