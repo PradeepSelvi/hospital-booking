@@ -9,7 +9,10 @@ import {
   getGovtFilterOptions,
   getGovtDistricts,
   getGovtHospitalById,
+  geocodePincode,
 } from '../services/govtHospitals'
+
+const PIN_RE = /^\d{6}$/
 
 // Fetch a real driving route between two points via the free OSRM demo server.
 // Returns an array of [lat, lng] points, or null on failure (caller falls back
@@ -76,6 +79,7 @@ export default function GovtHospitalSearch() {
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [routeLine, setRouteLine] = useState(null)
   const [routing, setRouting] = useState(false)
+  const [pinCoords, setPinCoords] = useState({}) // pincode -> { lat, lng }
 
   const debounceRef = useRef(null)
   const mapCardRef = useRef(null)
@@ -171,7 +175,7 @@ export default function GovtHospitalSearch() {
           setNearMode(true)
           setPage(0)
           toast[near.length ? 'success' : 'info'](
-            near.length ? `Found ${near.length} govt hospitals within ${radius} km.` : `No govt hospitals within ${radius} km.`
+            near.length ? `Found ${near.length} hospitals within ${radius} km.` : `No hospitals within ${radius} km.`
           )
         } catch (err) {
           console.error(err)
@@ -190,8 +194,41 @@ export default function GovtHospitalSearch() {
     if (nearMode && userLocation) handleNearMe(r)
   }
 
+  // ── Pincode geocoding: the source coordinates are unreliable, so resolve an
+  // accurate location from each result's pincode (cached + throttled). ──
+  useEffect(() => {
+    if (!rows.length) return
+    let cancelled = false
+    const pins = [...new Set(rows.map(h => h.pincode).filter(p => PIN_RE.test(p || '')))]
+    ;(async () => {
+      const resolved = {}
+      await Promise.all(pins.map(async (p) => {
+        const geo = await geocodePincode(p)
+        if (geo) resolved[p] = geo
+      }))
+      if (!cancelled && Object.keys(resolved).length) {
+        setPinCoords(prev => ({ ...prev, ...resolved }))
+      }
+    })()
+    return () => { cancelled = true }
+  }, [rows])
+
   // ── Map data ──
-  const mapPlaces = useMemo(() => rows.filter(h => h.latitude != null && h.longitude != null), [rows])
+  // Prefer the pincode-derived location. For rows with a valid pincode we wait
+  // for the geocode (rather than plotting the untrustworthy stored coordinate);
+  // rows without a pincode fall back to any stored coordinate.
+  const mapPlaces = useMemo(() => {
+    return rows.map(h => {
+      const pin = PIN_RE.test(h.pincode || '') ? h.pincode : null
+      if (pin) {
+        const geo = pinCoords[pin]
+        if (geo) return { ...h, latitude: geo.lat, longitude: geo.lng }
+        return null // awaiting geocode
+      }
+      if (h.latitude != null && h.longitude != null) return h
+      return null
+    }).filter(Boolean)
+  }, [rows, pinCoords])
   const withCoords = mapPlaces.length
   const totalPages = nearMode ? 1 : Math.max(1, Math.ceil(total / pageSize))
 
@@ -219,13 +256,20 @@ export default function GovtHospitalSearch() {
 
   // Draw a route to the hospital on the in-page map (not an external site).
   async function handleDirections(place) {
-    if (place.latitude == null || place.longitude == null) {
-      toast.error('Map location is not available for this hospital.')
-      return
-    }
     setRouting(true)
     try {
-      const dest = { lat: place.latitude, lng: place.longitude }
+      // Prefer the pincode-derived location over the unreliable stored coords.
+      let dest = null
+      if (PIN_RE.test(place.pincode || '')) {
+        dest = pinCoords[place.pincode] || await geocodePincode(place.pincode)
+      }
+      if (!dest && place.latitude != null && place.longitude != null) {
+        dest = { lat: place.latitude, lng: place.longitude }
+      }
+      if (!dest) {
+        toast.error('Map location is not available for this hospital.')
+        return
+      }
       let loc = userLocation
       if (!loc) {
         toast.info('Getting your location for directions…')
@@ -420,7 +464,7 @@ export default function GovtHospitalSearch() {
               {/* Results header */}
               <div className="d-flex justify-content-between align-items-center mb-2 px-1">
                 <h6 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, margin: 0 }}>
-                  {nearMode ? `Nearest Government Hospitals` : `Results`}
+                  {nearMode ? `Nearest Hospitals` : `Results`}
                   <span style={{ fontSize: 13, color: 'var(--gray-400)', fontWeight: 500, marginLeft: 8 }}>
                     {loading ? '' : nearMode ? `${total} found` : `${total.toLocaleString()} total`}
                   </span>
@@ -442,7 +486,7 @@ export default function GovtHospitalSearch() {
                 <div className="card-custom p-4 text-center">
                   <i className="bi bi-search" style={{ fontSize: 32, color: 'var(--gray-300)' }} />
                   <p style={{ fontSize: 14, color: 'var(--gray-500)', margin: '10px 0 0' }}>
-                    No government hospitals matched. Try adjusting your filters.
+                    No hospitals matched. Try adjusting your filters.
                   </p>
                 </div>
               ) : (
@@ -518,7 +562,8 @@ function FilterField({ label, children }) {
 }
 
 function GovtHospitalDrawer({ place, loading, routing, onClose, onDirections }) {
-  const hasCoords = place.latitude != null && place.longitude != null
+  const hasCoords = (place.latitude != null && place.longitude != null) ||
+    /^\d{6}$/.test(place.pincode || '')
 
   const contacts = [
     { label: 'Telephone', value: place.telephone, icon: 'bi-telephone', href: place.telephone ? `tel:${place.telephone}` : null },

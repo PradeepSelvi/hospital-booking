@@ -18,6 +18,68 @@ import { sanitizeSearchTerm } from '../security/sanitize'
 
 const PAGE_SIZE = 20
 
+// ─────────────────────────────────────────────
+// Pincode geocoding
+// The source table's `Location_Coordinates` are mostly empty or unreliable
+// (many rows share bogus coordinates), so we derive an accurate map location
+// from the hospital's 6-digit pincode via OSM Nominatim. Results are cached in
+// localStorage (incl. negative results) and network calls are throttled to
+// respect Nominatim's usage policy (max ~1 req/sec).
+// ─────────────────────────────────────────────
+const PIN_CACHE_KEY = 'govt_pincode_geo_v1'
+let _pinCache = null
+
+function loadPinCache() {
+  if (_pinCache) return _pinCache
+  try { _pinCache = JSON.parse(localStorage.getItem(PIN_CACHE_KEY) || '{}') } catch { _pinCache = {} }
+  return _pinCache
+}
+function savePinCache() {
+  try { localStorage.setItem(PIN_CACHE_KEY, JSON.stringify(_pinCache)) } catch { /* ignore quota */ }
+}
+
+let _geoQueue = Promise.resolve()
+let _lastGeoCall = 0
+function throttleGeo() {
+  _geoQueue = _geoQueue.then(async () => {
+    const wait = Math.max(0, 1100 - (Date.now() - _lastGeoCall))
+    if (wait) await new Promise(r => setTimeout(r, wait))
+    _lastGeoCall = Date.now()
+  })
+  return _geoQueue
+}
+
+/**
+ * Resolve a 6-digit Indian pincode to { lat, lng } (or null). Cached + throttled.
+ */
+export async function geocodePincode(pincode) {
+  const pin = String(pincode ?? '').trim()
+  if (!/^\d{6}$/.test(pin)) return null
+  const cache = loadPinCache()
+  if (pin in cache) return cache[pin] // may be a cached null (negative)
+  await throttleGeo()
+  // Re-check cache in case a concurrent request resolved it while queued.
+  if (pin in cache) return cache[pin]
+  try {
+    const params = new URLSearchParams({
+      postalcode: pin, country: 'India', format: 'json', limit: '1',
+    })
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+      headers: { 'Accept-Language': 'en' },
+      signal: AbortSignal.timeout(12000),
+    })
+    if (!res.ok) return null
+    const rows = await res.json()
+    const hit = rows?.[0]
+    const val = hit ? { lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) } : null
+    cache[pin] = val
+    savePinCache()
+    return val
+  } catch {
+    return null
+  }
+}
+
 /**
  * Split a free-text comma / newline / semicolon separated list into a clean
  * array of trimmed, de-duplicated, non-empty items.
