@@ -85,10 +85,14 @@ SELECT
     public.medi_null0(h."Website"::text)                        AS website,
     -- numeric-ish fields (text in source): strip non-digits, blank/0 → NULL.
     -- Cast to text first so the migration is safe whether the source column is
-    -- stored as text or as a numeric type.
-    NULLIF(regexp_replace(COALESCE(h."Total_Num_Beds"::text, ''), '\D', '', 'g'), '')::int AS total_beds,
-    NULLIF(regexp_replace(COALESCE(h."Number_Doctor"::text, ''),  '\D', '', 'g'), '')::int AS num_doctors,
-    NULLIF(regexp_replace(COALESCE(h."Establised_Year"::text, ''),'\D', '', 'g'), '')::int AS established_year,
+    -- stored as text or numeric. Only accept a sane digit-length so a stray
+    -- phone number in a dirty row can't overflow int4 → treated as NULL.
+    CASE WHEN regexp_replace(COALESCE(h."Total_Num_Beds"::text, ''), '\D', '', 'g') ~ '^\d{1,7}$'
+         THEN NULLIF(regexp_replace(COALESCE(h."Total_Num_Beds"::text, ''), '\D', '', 'g')::int, 0) END AS total_beds,
+    CASE WHEN regexp_replace(COALESCE(h."Number_Doctor"::text, ''), '\D', '', 'g') ~ '^\d{1,7}$'
+         THEN NULLIF(regexp_replace(COALESCE(h."Number_Doctor"::text, ''), '\D', '', 'g')::int, 0) END AS num_doctors,
+    CASE WHEN regexp_replace(COALESCE(h."Establised_Year"::text, ''), '\D', '', 'g') ~ '^\d{1,4}$'
+         THEN NULLIF(regexp_replace(COALESCE(h."Establised_Year"::text, ''), '\D', '', 'g')::int, 0) END AS established_year,
     -- "lat, lng" → numeric parts (only when the string is two valid numbers)
     CASE WHEN btrim(COALESCE(h."Location_Coordinates"::text, '')) ~ '^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$'
          THEN btrim(split_part(h."Location_Coordinates"::text, ',', 1))::double precision END AS latitude,

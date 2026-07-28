@@ -27,12 +27,14 @@ export default function HospitalsMap({
   userLocation = null,
   focusKey = null,
   onSelect,
+  routeLine = null,
   height = '440px',
 }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef(new Map()) // placeKey -> marker
   const userMarkerRef = useRef(null)
+  const routeLayerRef = useRef(null)
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
 
@@ -169,6 +171,28 @@ export default function HospitalsMap({
       marker.openPopup()
     }
   }, [focusKey])
+
+  // Draw / clear a directions route line and fit the map to it.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !leafletReady()) return
+    const L = window.L
+
+    if (routeLayerRef.current) {
+      map.removeLayer(routeLayerRef.current)
+      routeLayerRef.current = null
+    }
+    if (Array.isArray(routeLine) && routeLine.length >= 2) {
+      const line = L.polyline(routeLine, {
+        color: '#059669',
+        weight: 5,
+        opacity: 0.85,
+        lineJoin: 'round',
+      }).addTo(map)
+      routeLayerRef.current = line
+      map.fitBounds(line.getBounds(), { padding: [50, 50], maxZoom: 15 })
+    }
+  }, [routeLine, leafletReady])
 
   if (!leafletReady()) {
     return (

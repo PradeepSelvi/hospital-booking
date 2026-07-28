@@ -98,6 +98,22 @@ export async function searchGovtHospitals(filters = {}, page = 0) {
 }
 
 /**
+ * Fetch the complete record for a single hospital by its Sr_No.
+ * Used when opening the detail drawer so every available column is shown
+ * (the list/near queries return a reduced column set).
+ */
+export async function getGovtHospitalById(srNo) {
+  if (srNo == null) return null
+  const { data, error } = await supabase
+    .from('govt_hospitals_v')
+    .select('*')
+    .eq('sr_no', String(srNo))
+    .maybeSingle()
+  if (error) throw error
+  return data ? normalizeGovtRow(data) : null
+}
+
+/**
  * Radius search for the map "near me" flow.
  * @param {number} lat
  * @param {number} lng

@@ -84,7 +84,7 @@ export default function Navbar() {
               Find Doctors
             </Link>
             <Link to="/govt-hospitals" className={`nav-link-custom ${isActive('/govt-hospitals') ? 'active' : ''}`}>
-              Govt Hospitals
+              Hospital Search
             </Link>
 
             {!user ? (
