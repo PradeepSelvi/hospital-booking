@@ -2550,6 +2550,68 @@ body.nav-open {
   background: #0E7490;
   box-shadow: 0 4px 12px rgba(14,116,144,0.4);
 }
+/* Government hospital directory pin */
+.hospital-marker-pin.govt {
+  background: #059669;
+  box-shadow: 0 4px 12px rgba(5,150,105,0.4);
+}
+
+/* ── Government hospital search: result cards + chips ── */
+.govt-result-card {
+  width: 100%;
+  border: 1px solid var(--gray-100);
+  padding: 14px;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  background: #fff;
+}
+.govt-result-card:hover {
+  transform: translateY(-2px);
+  border-color: #059669;
+  box-shadow: 0 8px 20px rgba(5,150,105,0.12);
+}
+.govt-result-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 10px;
+  background: rgba(5,150,105,0.1);
+  color: #059669;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.govt-result-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--dark);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.govt-result-meta {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-top: 3px;
+}
+.govt-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(5,150,105,0.12);
+  color: #047857;
+  white-space: nowrap;
+}
+.govt-chip.subtle {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
 
 @keyframes markerBounce {
   0% { transform: rotate(-45deg) translateY(-20px); opacity: 0; }

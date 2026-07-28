@@ -62,11 +62,18 @@ export default function HospitalsMap({
     }
   }, [leafletReady])
 
-  // Build a divIcon for a place (blue = MediBook, teal = external).
-  const makeIcon = useCallback((external) => {
+  // Build a divIcon for a place (blue = MediBook, teal = external, green = govt).
+  const makeIcon = useCallback((place) => {
     const L = window.L
-    const cls = external ? 'hospital-marker-pin external' : 'hospital-marker-pin'
-    const icon = external ? 'bi-geo-alt-fill' : 'bi-hospital-fill'
+    let cls = 'hospital-marker-pin'
+    let icon = 'bi-hospital-fill'
+    if (place.govt) {
+      cls = 'hospital-marker-pin govt'
+      icon = 'bi-hospital-fill'
+    } else if (place.external) {
+      cls = 'hospital-marker-pin external'
+      icon = 'bi-geo-alt-fill'
+    }
     return L.divIcon({
       className: 'hospital-map-marker',
       html: `<div class="${cls}"><i class="bi ${icon}"></i></div>`,
@@ -90,13 +97,17 @@ export default function HospitalsMap({
       if (h.latitude == null || h.longitude == null) return
       if (Number.isNaN(h.latitude) || Number.isNaN(h.longitude)) return
 
-      const marker = L.marker([h.latitude, h.longitude], { icon: makeIcon(h.external) }).addTo(map)
-      const ratingLine = h.review_count > 0
-        ? `<div style="font-size:12px;color:#F59E0B;margin-top:2px;">★ ${Number(h.avg_rating).toFixed(1)} <span style="color:#888;">(${h.review_count})</span></div>`
-        : `<div style="font-size:12px;color:#999;margin-top:2px;">No reviews yet</div>`
-      const badge = h.external
-        ? `<span style="font-size:10px;font-weight:700;color:#0E7490;background:rgba(14,116,144,.1);padding:1px 6px;border-radius:8px;">Not on MediBook</span>`
-        : `<span style="font-size:10px;font-weight:700;color:#0077B6;background:rgba(0,119,182,.1);padding:1px 6px;border-radius:8px;">MediBook</span>`
+      const marker = L.marker([h.latitude, h.longitude], { icon: makeIcon(h) }).addTo(map)
+      const ratingLine = h.govt
+        ? (h.care_type ? `<div style="font-size:12px;color:#059669;margin-top:2px;">${escapeHtml(h.care_type)}</div>` : '')
+        : h.review_count > 0
+          ? `<div style="font-size:12px;color:#F59E0B;margin-top:2px;">★ ${Number(h.avg_rating).toFixed(1)} <span style="color:#888;">(${h.review_count})</span></div>`
+          : `<div style="font-size:12px;color:#999;margin-top:2px;">No reviews yet</div>`
+      const badge = h.govt
+        ? `<span style="font-size:10px;font-weight:700;color:#059669;background:rgba(5,150,105,.1);padding:1px 6px;border-radius:8px;">Govt Hospital</span>`
+        : h.external
+          ? `<span style="font-size:10px;font-weight:700;color:#0E7490;background:rgba(14,116,144,.1);padding:1px 6px;border-radius:8px;">Not on MediBook</span>`
+          : `<span style="font-size:10px;font-weight:700;color:#0077B6;background:rgba(0,119,182,.1);padding:1px 6px;border-radius:8px;">MediBook</span>`
       marker.bindPopup(`
         <div style="font-family:'Inter',sans-serif;min-width:170px;">
           <strong style="font-size:14px;color:#1a1a2e;">${escapeHtml(h.name)}</strong>
