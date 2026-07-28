@@ -1,9 +1,12 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../context/AuthContext'
 import { useState, useEffect, useRef } from 'react'
 import NotificationBell from './NotificationBell'
+import LanguageSwitcher from './LanguageSwitcher'
 
 export default function Navbar() {
+  const { t } = useTranslation()
   const { user, profile, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -63,7 +66,7 @@ export default function Navbar() {
             className="d-lg-none btn-ghost"
             style={{ padding: '6px 10px', fontSize: 22 }}
             onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-label={mobileOpen ? t('nav.closeMenu') : t('nav.openMenu')}
             aria-expanded={mobileOpen}
             aria-controls="nav-links"
           >
@@ -78,56 +81,59 @@ export default function Navbar() {
             role="menubar"
           >
             <Link to="/" className={`nav-link-custom ${isActive('/') && location.pathname === '/' ? 'active' : ''}`}>
-              Home
+              {t('nav.home')}
             </Link>
             <Link to="/doctors" className={`nav-link-custom ${isActive('/doctors') ? 'active' : ''}`}>
-              Find Doctors
+              {t('nav.findDoctors')}
             </Link>
             <Link to="/govt-hospitals" className={`nav-link-custom ${isActive('/govt-hospitals') ? 'active' : ''}`}>
-              Hospital Search
+              {t('nav.hospitalSearch')}
             </Link>
 
             {!user ? (
               <>
                 <Link to="/collaborate" className={`nav-link-custom ${isActive('/collaborate') ? 'active' : ''}`}>
-                  <i className="bi bi-people me-1" />Join as Doctor
+                  <i className="bi bi-people me-1" />{t('nav.joinAsDoctor')}
                 </Link>
-                <Link to="/login" className="nav-link-custom">Login</Link>
+                <Link to="/login" className="nav-link-custom">{t('nav.login')}</Link>
                 <Link to="/register" className="btn-primary-custom btn-sm">
-                  Register
+                  {t('nav.register')}
                 </Link>
+                <LanguageSwitcher className="ms-1" />
               </>
             ) : (
               <>
                 {role === 'PATIENT' && (
                   <>
                     <Link to="/patient/dashboard" className={`nav-link-custom ${isActive('/patient') ? 'active' : ''}`}>
-                      Dashboard
+                      {t('nav.dashboard')}
                     </Link>
                     <Link to="/patient/appointments" className={`nav-link-custom ${isActive('/patient/appointments') ? 'active' : ''}`}>
-                      My Appointments
+                      {t('nav.myAppointments')}
                     </Link>
                     <Link to="/patient/medical-history" className={`nav-link-custom ${isActive('/patient/medical-history') ? 'active' : ''}`}>
-                      Medical History
+                      {t('nav.medicalHistory')}
                     </Link>
                     <Link to="/patient/prescriptions" className={`nav-link-custom ${isActive('/patient/prescriptions') ? 'active' : ''}`}>
-                      Prescriptions
+                      {t('nav.prescriptions')}
                     </Link>
                     <Link to="/patient/messages" className={`nav-link-custom ${isActive('/patient/messages') ? 'active' : ''}`}>
-                      Messages
+                      {t('nav.messages')}
                     </Link>
                   </>
                 )}
                 {role === 'DOCTOR' && (
                   <Link to="/doctor/dashboard" className={`nav-link-custom ${isActive('/doctor') ? 'active' : ''}`}>
-                    Doctor Portal
+                    {t('nav.doctorPortal')}
                   </Link>
                 )}
                 {role === 'ADMIN' && (
                   <Link to="/admin/dashboard" className={`nav-link-custom ${isActive('/admin') ? 'active' : ''}`}>
-                    Admin Portal
+                    {t('nav.adminPortal')}
                   </Link>
                 )}
+
+                <LanguageSwitcher className="ms-1" compact />
 
                 {/* Notification Bell */}
                 <NotificationBell />
@@ -139,13 +145,13 @@ export default function Navbar() {
                     style={{ padding: '6px 12px', borderRadius: 'var(--radius-full)' }}
                     data-bs-toggle="dropdown"
                     aria-expanded="false"
-                    aria-label="Account menu"
+                    aria-label={t('nav.accountMenu')}
                   >
                     <div className="avatar" style={{ width: 32, height: 32, fontSize: 13 }}>
                       {getInitial()}
                     </div>
                     <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--gray-700)' }} className="d-none d-md-inline">
-                      {profile?.name ?? 'Account'}
+                      {profile?.name ?? t('nav.account')}
                     </span>
                     <i className="bi bi-chevron-down" style={{ fontSize: 11, color: 'var(--gray-400)' }} />
                   </button>
@@ -157,32 +163,32 @@ export default function Navbar() {
                       <>
                         <li>
                           <Link className="dropdown-item py-2" to="/patient/dashboard">
-                            <i className="bi bi-grid me-2" />Dashboard
+                            <i className="bi bi-grid me-2" />{t('nav.dashboard')}
                           </Link>
                         </li>
                         <li>
                           <Link className="dropdown-item py-2" to="/patient/profile">
-                            <i className="bi bi-person-circle me-2" />My Profile
+                            <i className="bi bi-person-circle me-2" />{t('nav.myProfile')}
                           </Link>
                         </li>
                         <li>
                           <Link className="dropdown-item py-2" to="/patient/medical-history">
-                            <i className="bi bi-file-medical me-2" />Medical History
+                            <i className="bi bi-file-medical me-2" />{t('nav.medicalHistory')}
                           </Link>
                         </li>
                         <li>
                           <Link className="dropdown-item py-2" to="/patient/prescriptions">
-                            <i className="bi bi-capsule me-2" />Prescriptions
+                            <i className="bi bi-capsule me-2" />{t('nav.prescriptions')}
                           </Link>
                         </li>
                         <li>
                           <Link className="dropdown-item py-2" to="/complaints">
-                            <i className="bi bi-megaphone me-2" />Complaints
+                            <i className="bi bi-megaphone me-2" />{t('nav.complaints')}
                           </Link>
                         </li>
                         <li>
                           <Link className="dropdown-item py-2" to="/patient/notification-preferences">
-                            <i className="bi bi-bell-slash me-2" />Notification Settings
+                            <i className="bi bi-bell-slash me-2" />{t('nav.notificationSettings')}
                           </Link>
                         </li>
                       </>
@@ -191,12 +197,12 @@ export default function Navbar() {
                       <>
                         <li>
                           <Link className="dropdown-item py-2" to="/doctor/dashboard">
-                            <i className="bi bi-grid me-2" />Dashboard
+                            <i className="bi bi-grid me-2" />{t('nav.dashboard')}
                           </Link>
                         </li>
                         <li>
                           <Link className="dropdown-item py-2" to="/doctor/profile">
-                            <i className="bi bi-person-circle me-2" />My Profile
+                            <i className="bi bi-person-circle me-2" />{t('nav.myProfile')}
                           </Link>
                         </li>
                       </>
@@ -205,12 +211,12 @@ export default function Navbar() {
                       <>
                         <li>
                           <Link className="dropdown-item py-2" to="/admin/dashboard">
-                            <i className="bi bi-grid me-2" />Dashboard
+                            <i className="bi bi-grid me-2" />{t('nav.dashboard')}
                           </Link>
                         </li>
                         <li>
                           <Link className="dropdown-item py-2" to="/admin/profile">
-                            <i className="bi bi-person-circle me-2" />My Profile
+                            <i className="bi bi-person-circle me-2" />{t('nav.myProfile')}
                           </Link>
                         </li>
                       </>
@@ -218,12 +224,12 @@ export default function Navbar() {
                     <li><hr className="dropdown-divider" /></li>
                     <li>
                       <Link className="dropdown-item py-2" to="/security">
-                        <i className="bi bi-shield-lock me-2" />Two-Factor Auth
+                        <i className="bi bi-shield-lock me-2" />{t('nav.twoFactorAuth')}
                       </Link>
                     </li>
                     <li>
                       <button className="dropdown-item py-2 text-danger" onClick={handleSignOut}>
-                        <i className="bi bi-box-arrow-right me-2" />Sign Out
+                        <i className="bi bi-box-arrow-right me-2" />{t('nav.signOut')}
                       </button>
                     </li>
                   </ul>

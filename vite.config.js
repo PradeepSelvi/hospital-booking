@@ -5,7 +5,7 @@ import { SPECIALIZATIONS } from './src/data/specializations.js'
 
 // Public site URL for absolute sitemap URLs. Override with VITE_SITE_URL in the
 // build environment (e.g. a custom domain); falls back to the Vercel domain.
-const SITE_URL = (process.env.VITE_SITE_URL || 'https://hospital-booking-nine.vercel.app')
+const SITE_URL = (process.env.VITE_SITE_URL || 'https://hospital-booking-rose.vercel.app')
   .replace(/\/$/, '')
 
 // A unique id for this build. On Vercel we prefer the git commit SHA (stable per
