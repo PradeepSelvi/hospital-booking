@@ -5,14 +5,27 @@ import Footer from '../components/Footer'
 import HospitalsMap from '../components/HospitalsMap'
 import {
   searchGovtHospitals,
-  getGovtHospitalsNear,
   getGovtFilterOptions,
   getGovtDistricts,
   getGovtHospitalById,
   geocodePincode,
+  reverseGeocode,
 } from '../services/govtHospitals'
 
 const PIN_RE = /^\d{6}$/
+const MAX_GEOCODE_PER_PAGE = 25 // cap Nominatim calls per result page
+
+// Haversine distance in km between two { lat, lng } points.
+function distanceKm(a, b) {
+  if (!a || !b) return null
+  const R = 6371
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180
+  const lat1 = (a.lat * Math.PI) / 180
+  const lat2 = (b.lat * Math.PI) / 180
+  const h = Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2)
+  return 2 * R * Math.asin(Math.sqrt(h))
+}
 
 // Fetch a real driving route between two points via the free OSRM demo server.
 // Returns an array of [lat, lng] points, or null on failure (caller falls back
@@ -44,8 +57,6 @@ function getLocationOnce() {
   })
 }
 
-const RADIUS_OPTIONS = [5, 10, 25, 50, 100]
-
 const EMPTY_FILTERS = {
   search: '',
   state: '',
@@ -71,7 +82,6 @@ export default function GovtHospitalSearch() {
 
   const [nearMode, setNearMode] = useState(false)
   const [userLocation, setUserLocation] = useState(null)
-  const [radiusKm, setRadiusKm] = useState(25)
   const [locating, setLocating] = useState(false)
 
   const [focusKey, setFocusKey] = useState(null)
@@ -80,9 +90,20 @@ export default function GovtHospitalSearch() {
   const [routeLine, setRouteLine] = useState(null)
   const [routing, setRouting] = useState(false)
   const [pinCoords, setPinCoords] = useState({}) // pincode -> { lat, lng }
+  const [fitSignal, setFitSignal] = useState(0) // bumped on each new search → map refits once
 
   const debounceRef = useRef(null)
   const mapCardRef = useRef(null)
+  const filtersRef = useRef(filters)   // always-current filters for async callbacks
+  const reqIdRef = useRef(0)           // monotonic id → ignore stale responses
+  const selectedKeyRef = useRef(null)  // guards the detail-loading spinner
+
+  // Keep the filters ref in sync so debounced/async callbacks never read stale state.
+  useEffect(() => { filtersRef.current = filters }, [filters])
+
+  function clearDebounce() {
+    if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null }
+  }
 
   // ── Load dropdown options once ──
   useEffect(() => {
@@ -98,25 +119,34 @@ export default function GovtHospitalSearch() {
   }, [filters.state])
 
   // ── Search runner ──
-  const runSearch = useCallback(async (nextPage = 0, activeFilters = filters) => {
+  // Uses filtersRef (never a stale closure) and a monotonic request id so that
+  // an earlier-but-slower response can't overwrite a newer one. Returns the
+  // result (or null when the response was superseded / errored).
+  const runSearch = useCallback(async (nextPage = 0, activeFilters = filtersRef.current, { keepNearMode = false } = {}) => {
+    const reqId = ++reqIdRef.current
     setLoading(true)
-    setNearMode(false)
+    if (!keepNearMode) setNearMode(false)
     setRouteLine(null)
     try {
       const res = await searchGovtHospitals(activeFilters, nextPage)
+      if (reqId !== reqIdRef.current) return null // superseded by a newer search
       setRows(res.rows)
       setTotal(res.total)
       setPage(res.page)
       setPageSize(res.pageSize)
+      setFitSignal(s => s + 1)
+      return res
     } catch (err) {
-      console.error('Govt hospital search failed:', err)
+      if (reqId !== reqIdRef.current) return null
+      console.error('Hospital search failed:', err)
       toast.error('Could not load hospitals. Please try again.')
       setRows([])
       setTotal(0)
+      return null
     } finally {
-      setLoading(false)
+      if (reqId === reqIdRef.current) setLoading(false)
     }
-  }, [filters])
+  }, [])
 
   // Initial load.
   useEffect(() => { runSearch(0, EMPTY_FILTERS) }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -132,66 +162,84 @@ export default function GovtHospitalSearch() {
 
   // Auto-search on dropdown/number changes (not while typing name).
   function applyDropdown(key, value) {
+    clearDebounce() // a pending name search must not overwrite this change
     const next = { ...filters, [key]: value }
     if (key === 'state') next.district = ''
     setFilters(next)
     runSearch(0, next)
   }
 
+  // Run a search from the current committed filters (used by text/number inputs
+  // on blur / Enter). Reads filtersRef so it always has the latest values.
+  function runFromCurrent() {
+    clearDebounce()
+    runSearch(0, filtersRef.current)
+  }
+
   // Debounced name search.
   function onSearchInput(value) {
     updateFilter('search', value)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
+    clearDebounce()
     debounceRef.current = setTimeout(() => {
-      runSearch(0, { ...filters, search: value })
+      runSearch(0, { ...filtersRef.current, search: value })
     }, 450)
   }
 
   function submitSearch(e) {
     e?.preventDefault()
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    runSearch(0, filters)
+    clearDebounce()
+    runSearch(0, filtersRef.current)
   }
 
   function resetAll() {
+    clearDebounce()
     setFilters(EMPTY_FILTERS)
     setUserLocation(null)
+    setNearMode(false)
     runSearch(0, EMPTY_FILTERS)
   }
 
-  // ── Near me (radius) search ──
-  function handleNearMe(radius = radiusKm) {
-    if (!navigator.geolocation) return toast.error('Geolocation is not supported by your browser.')
+  // ── Near me ──
+  // The source per-hospital coordinates are unreliable, so instead of a bogus
+  // radius search we resolve the user's district from their location and scope
+  // the search to it (falling back to the state). Result cards then show an
+  // approximate distance computed from the reliable pincode geocode.
+  async function handleNearMe() {
+    clearDebounce()
     setLocating(true)
-    setRouteLine(null)
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-        setUserLocation(loc)
-        try {
-          const near = await getGovtHospitalsNear(loc.lat, loc.lng, radius, 150)
-          setRows(near)
-          setTotal(near.length)
-          setNearMode(true)
-          setPage(0)
-          toast[near.length ? 'success' : 'info'](
-            near.length ? `Found ${near.length} hospitals within ${radius} km.` : `No hospitals within ${radius} km.`
-          )
-        } catch (err) {
-          console.error(err)
-          toast.error('Could not fetch nearby hospitals.')
-        } finally {
-          setLocating(false)
-        }
-      },
-      () => { setLocating(false); toast.error('Could not get your location. Please allow access and retry.') },
-      { enableHighAccuracy: true, timeout: 10000 }
-    )
-  }
+    try {
+      const loc = userLocation || await getLocationOnce()
+      if (!loc) {
+        toast.error('Could not get your location. Please allow access and retry.')
+        return
+      }
+      setUserLocation(loc)
 
-  function changeRadius(r) {
-    setRadiusKm(r)
-    if (nearMode && userLocation) handleNearMe(r)
+      const area = await reverseGeocode(loc.lat, loc.lng)
+      if (!area || (!area.district && !area.state)) {
+        toast.info('Could not determine your area. Try searching by name or filters.')
+        return
+      }
+
+      // Prefer district scope; fall back to state if the district name doesn't
+      // match the directory's spelling (returns no rows).
+      let next = { ...EMPTY_FILTERS, state: area.state || '', district: area.district || '' }
+      let res = await runSearch(0, next, { keepNearMode: true })
+      if (res && res.total === 0 && next.district) {
+        next = { ...EMPTY_FILTERS, state: area.state || '' }
+        res = await runSearch(0, next, { keepNearMode: true })
+      }
+      if (!res) return // superseded / failed (runSearch already handled UI)
+
+      setFilters(next)
+      setNearMode(true)
+      const areaLabel = next.district || next.state
+      toast.success(res.total
+        ? `Showing hospitals near you${areaLabel ? ` in ${areaLabel}` : ''}.`
+        : 'No hospitals found for your area.')
+    } finally {
+      setLocating(false)
+    }
   }
 
   // ── Pincode geocoding: the source coordinates are unreliable, so resolve an
@@ -200,6 +248,7 @@ export default function GovtHospitalSearch() {
     if (!rows.length) return
     let cancelled = false
     const pins = [...new Set(rows.map(h => h.pincode).filter(p => PIN_RE.test(p || '')))]
+      .slice(0, MAX_GEOCODE_PER_PAGE)
     ;(async () => {
       const resolved = {}
       await Promise.all(pins.map(async (p) => {
@@ -230,23 +279,46 @@ export default function GovtHospitalSearch() {
     }).filter(Boolean)
   }, [rows, pinCoords])
   const withCoords = mapPlaces.length
+
+  // Attach an approximate distance (from the reliable pincode geocode) when the
+  // user's location is known; sort nearest-first in near mode.
+  const displayRows = useMemo(() => {
+    const withDist = rows.map(h => {
+      const geo = PIN_RE.test(h.pincode || '') ? pinCoords[h.pincode] : null
+      const dist = userLocation && geo ? distanceKm(userLocation, geo) : null
+      return { ...h, _dist: dist }
+    })
+    if (nearMode && userLocation) {
+      return withDist.slice().sort((a, b) => {
+        if (a._dist == null && b._dist == null) return 0
+        if (a._dist == null) return 1
+        if (b._dist == null) return -1
+        return a._dist - b._dist
+      })
+    }
+    return withDist
+  }, [rows, pinCoords, userLocation, nearMode])
+
   const totalPages = nearMode ? 1 : Math.max(1, Math.ceil(total / pageSize))
 
   async function openDetail(place) {
     setSelected(place)
     setFocusKey(place.placeKey)
+    selectedKeyRef.current = place.placeKey
     // Pull the complete record from the DB so every available column shows
     // (list/near queries return a reduced column set).
     setLoadingDetail(true)
     try {
       const full = await getGovtHospitalById(place.sr_no)
+      // Ignore if the user has since opened a different hospital or closed the drawer.
+      if (selectedKeyRef.current !== place.placeKey) return
       if (full) {
         setSelected(prev => (prev && prev.placeKey === full.placeKey ? { ...prev, ...full } : prev))
       }
     } catch (err) {
       console.error('Failed to load hospital detail:', err)
     } finally {
-      setLoadingDetail(false)
+      if (selectedKeyRef.current === place.placeKey) setLoadingDetail(false)
     }
   }
 
@@ -276,6 +348,7 @@ export default function GovtHospitalSearch() {
         loc = await getLocationOnce()
         if (loc) setUserLocation(loc)
       }
+      selectedKeyRef.current = null
       setSelected(null)
       setFocusKey(place.placeKey)
       scrollMapIntoView()
@@ -373,8 +446,8 @@ export default function GovtHospitalSearch() {
                   <input className="form-input-custom" type="text" inputMode="numeric" maxLength={6}
                     placeholder="e.g. 110001" value={filters.pincode}
                     onChange={e => updateFilter('pincode', e.target.value.replace(/\D/g, ''))}
-                    onBlur={() => runSearch(0, filters)}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), runSearch(0, filters))} />
+                    onBlur={runFromCurrent}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), runFromCurrent())} />
                 </FilterField>
 
                 <FilterField label="Care Type">
@@ -395,24 +468,24 @@ export default function GovtHospitalSearch() {
                   <input className="form-input-custom" type="text" placeholder="e.g. Cardiology"
                     value={filters.specialty}
                     onChange={e => updateFilter('specialty', e.target.value)}
-                    onBlur={() => runSearch(0, filters)}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), runSearch(0, filters))} />
+                    onBlur={runFromCurrent}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), runFromCurrent())} />
                 </FilterField>
 
                 <FilterField label="Facility">
                   <input className="form-input-custom" type="text" placeholder="e.g. ICU, Blood Bank"
                     value={filters.facility}
                     onChange={e => updateFilter('facility', e.target.value)}
-                    onBlur={() => runSearch(0, filters)}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), runSearch(0, filters))} />
+                    onBlur={runFromCurrent}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), runFromCurrent())} />
                 </FilterField>
 
                 <FilterField label="Min. Beds">
                   <input className="form-input-custom" type="number" min="0" placeholder="Any"
                     value={filters.minBeds}
                     onChange={e => updateFilter('minBeds', e.target.value)}
-                    onBlur={() => runSearch(0, filters)}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), runSearch(0, filters))} />
+                    onBlur={runFromCurrent}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), runFromCurrent())} />
                 </FilterField>
               </div>
             </div>
@@ -426,6 +499,7 @@ export default function GovtHospitalSearch() {
                   userLocation={userLocation}
                   focusKey={focusKey}
                   routeLine={routeLine}
+                  fitSignal={fitSignal}
                   onSelect={openDetail}
                   height="380px"
                 />
@@ -444,12 +518,6 @@ export default function GovtHospitalSearch() {
                         style={{ fontSize: 12, padding: '8px 12px', color: 'var(--primary)' }}>
                         <i className="bi bi-x-lg me-1" />Clear route
                       </button>
-                    )}
-                    {nearMode && (
-                      <select className="form-input-custom" style={{ padding: '6px 10px', fontSize: 12, width: 'auto' }}
-                        value={radiusKm} onChange={e => changeRadius(Number(e.target.value))}>
-                        {RADIUS_OPTIONS.map(r => <option key={r} value={r}>{r} km</option>)}
-                      </select>
                     )}
                     <button className="btn-primary-custom" type="button" onClick={() => handleNearMe()} disabled={locating}
                       style={{ fontSize: 12, padding: '8px 14px', background: '#059669', borderColor: '#059669' }}>
@@ -470,8 +538,8 @@ export default function GovtHospitalSearch() {
                   </span>
                 </h6>
                 {nearMode && (
-                  <button className="btn-ghost" style={{ fontSize: 12, color: 'var(--primary)' }} type="button" onClick={() => runSearch(0, filters)}>
-                    <i className="bi bi-arrow-left me-1" />Back to search
+                  <button className="btn-ghost" style={{ fontSize: 12, color: 'var(--primary)' }} type="button" onClick={resetAll}>
+                    <i className="bi bi-arrow-left me-1" />Back to all
                   </button>
                 )}
               </div>
@@ -491,7 +559,7 @@ export default function GovtHospitalSearch() {
                 </div>
               ) : (
                 <div className="row g-3">
-                  {rows.map(h => (
+                  {displayRows.map(h => (
                     <div key={h.placeKey} className="col-md-6">
                       <button className="card-custom govt-result-card" onClick={() => openDetail(h)} type="button">
                         <div className="d-flex align-items-start gap-2">
@@ -508,8 +576,8 @@ export default function GovtHospitalSearch() {
                               {h.total_beds != null && <span className="govt-chip subtle"><i className="bi bi-hospital me-1" />{h.total_beds} beds</span>}
                             </div>
                           </div>
-                          {h.distance != null && (
-                            <span className="hospital-nearby-distance">{h.distance.toFixed(1)} km</span>
+                          {h._dist != null && (
+                            <span className="hospital-nearby-distance" title="Approximate distance (pincode-based)">≈ {h._dist.toFixed(1)} km</span>
                           )}
                         </div>
                       </button>
@@ -544,7 +612,7 @@ export default function GovtHospitalSearch() {
           place={selected}
           loading={loadingDetail}
           routing={routing}
-          onClose={() => setSelected(null)}
+          onClose={() => { selectedKeyRef.current = null; setSelected(null) }}
           onDirections={handleDirections}
         />
       )}

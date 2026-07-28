@@ -41,6 +41,8 @@ function emitSeoFiles() {
       const staticRoutes = [
         { loc: '/', changefreq: 'daily', priority: '1.0' },
         { loc: '/doctors', changefreq: 'daily', priority: '0.9' },
+        { loc: '/hospitals', changefreq: 'weekly', priority: '0.8' },
+        { loc: '/govt-hospitals', changefreq: 'weekly', priority: '0.8' },
         { loc: '/collaborate', changefreq: 'monthly', priority: '0.6' },
         { loc: '/register', changefreq: 'monthly', priority: '0.5' },
         { loc: '/login', changefreq: 'monthly', priority: '0.3' },

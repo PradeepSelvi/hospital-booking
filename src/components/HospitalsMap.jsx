@@ -28,6 +28,7 @@ export default function HospitalsMap({
   focusKey = null,
   onSelect,
   routeLine = null,
+  fitSignal = null,
   height = '440px',
 }) {
   const containerRef = useRef(null)
@@ -35,6 +36,7 @@ export default function HospitalsMap({
   const markersRef = useRef(new Map()) // placeKey -> marker
   const userMarkerRef = useRef(null)
   const routeLayerRef = useRef(null)
+  const fitDoneRef = useRef(null) // last fitSignal we've auto-fit for
   const onSelectRef = useRef(onSelect)
   onSelectRef.current = onSelect
 
@@ -123,13 +125,21 @@ export default function HospitalsMap({
       points.push([h.latitude, h.longitude])
     })
 
+    // Auto-fit only once per new search (fitSignal change) and never while a
+    // route is displayed — otherwise late-resolving markers (e.g. async pincode
+    // geocodes) would keep yanking the viewport around or clobber the route.
+    if (routeLine) return
+    if (fitSignal != null && fitDoneRef.current === fitSignal) return
+
     if (userLocation) points.push([userLocation.lat, userLocation.lng])
     if (points.length === 1) {
       map.setView(points[0], 13)
+      if (fitSignal != null) fitDoneRef.current = fitSignal
     } else if (points.length > 1) {
       map.fitBounds(points, { padding: [40, 40], maxZoom: 14 })
+      if (fitSignal != null) fitDoneRef.current = fitSignal
     }
-  }, [hospitals, leafletReady, makeIcon]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hospitals, leafletReady, makeIcon, fitSignal, routeLine, userLocation])
 
   // "You are here" marker.
   useEffect(() => {

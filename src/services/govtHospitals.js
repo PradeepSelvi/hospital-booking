@@ -50,6 +50,35 @@ function throttleGeo() {
 }
 
 /**
+ * Reverse-geocode a coordinate to the user's administrative area
+ * ({ state, district, pincode }) via OSM Nominatim. Throttled; returns null on
+ * failure. Used by "Near me" to scope the search to the user's district.
+ */
+export async function reverseGeocode(lat, lng) {
+  if (lat == null || lng == null) return null
+  await throttleGeo()
+  try {
+    const params = new URLSearchParams({
+      lat: String(lat), lon: String(lng), format: 'json', addressdetails: '1', zoom: '10',
+    })
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
+      headers: { 'Accept-Language': 'en' },
+      signal: AbortSignal.timeout(12000),
+    })
+    if (!res.ok) return null
+    const json = await res.json()
+    const a = json.address || {}
+    return {
+      state: a.state || null,
+      district: a.state_district || a.county || a.district || null,
+      pincode: a.postcode || null,
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
  * Resolve a 6-digit Indian pincode to { lat, lng } (or null). Cached + throttled.
  */
 export async function geocodePincode(pincode) {
