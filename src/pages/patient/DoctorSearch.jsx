@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { getDoctors } from '../../services/doctors'
 import { getAllHospitals, getPhotoUrl } from '../../services/hospital'
@@ -15,15 +16,16 @@ const SPECIALIZATIONS = [
   'General Physician', 'Psychiatry', 'Urology', 'Oncology'
 ]
 
-const HOSPITAL_TYPE_LABELS = {
-  GOVERNMENT: 'Government',
-  PRIVATE: 'Private',
-  CLINIC: 'Clinic',
-  MULTI_SPECIALTY: 'Multi-Specialty',
-}
-
 export default function DoctorSearch() {
+  const { t } = useTranslation('patient')
   const [searchParams, setSearchParams] = useSearchParams()
+
+  const HOSPITAL_TYPE_LABELS = {
+    GOVERNMENT: t('doctorSearch.typeGovernment'),
+    PRIVATE: t('doctorSearch.typePrivate'),
+    CLINIC: t('doctorSearch.typeClinic'),
+    MULTI_SPECIALTY: t('doctorSearch.typeMultiSpecialty'),
+  }
 
   const [doctors, setDoctors] = useState([])
   const [hospitals, setHospitals] = useState([])
@@ -101,13 +103,13 @@ export default function DoctorSearch() {
       {/* Page Header */}
       <div className="page-header">
         <div className="container">
-          <div className="section-badge">Search</div>
+          <div className="section-badge">{t('doctorSearch.badge')}</div>
           <h1 style={{ fontSize: 'clamp(1.8rem, 3vw, 2.6rem)', color: 'white', fontFamily: 'var(--font-display)', position: 'relative', zIndex: 1 }}>
-            Find Doctors, Specializations & Hospitals
+            {t('doctorSearch.title')}
           </h1>
           <p style={{ color: 'rgba(255,255,255,0.7)', marginTop: 10, fontSize: 16, position: 'relative', zIndex: 1 }}>
-            Search across {doctors.length} doctor{doctors.length !== 1 ? 's' : ''}
-            {hospitals.length > 0 ? ` and ${hospitals.length} hospital${hospitals.length !== 1 ? 's' : ''}` : ''}
+            {t('doctorSearch.searchAcrossDoctors', { count: doctors.length })}
+            {hospitals.length > 0 ? t('doctorSearch.andHospitals', { count: hospitals.length }) : ''}
           </p>
 
           {/* Main search bar */}
@@ -116,11 +118,11 @@ export default function DoctorSearch() {
             <input
               id="main-search"
               type="text"
-              placeholder="Search by doctor, specialization, or hospital..."
+              placeholder={t('doctorSearch.searchPlaceholder')}
               value={filters.search}
               onChange={e => handleFilterChange('search', e.target.value)}
               maxLength={60}
-              aria-label="Search doctors, specializations, and hospitals"
+              aria-label={t('doctorSearch.searchAriaLabel')}
             />
             {filters.search && (
               <button
@@ -128,7 +130,7 @@ export default function DoctorSearch() {
                 className="btn-ghost"
                 onClick={() => handleFilterChange('search', '')}
                 style={{ padding: '8px 14px' }}
-                aria-label="Clear search"
+                aria-label={t('doctorSearch.clearSearchAria')}
               >
                 <i className="bi bi-x-lg" />
               </button>
@@ -144,16 +146,16 @@ export default function DoctorSearch() {
             <div className="card-custom p-4 position-sticky" style={{ top: 90 }}>
               <div className="d-flex justify-content-between align-items-center mb-4">
                 <h6 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, margin: 0 }}>
-                  <i className="bi bi-funnel me-2 text-primary" />Filters
+                  <i className="bi bi-funnel me-2 text-primary" />{t('doctorSearch.filters')}
                 </h6>
                 <button className="btn-ghost" style={{ padding: '4px 12px', fontSize: 12 }} onClick={clearFilters}>
-                  Clear All
+                  {t('doctorSearch.clearAll')}
                 </button>
               </div>
 
               {/* Specialization */}
               <div className="mb-4">
-                <label className="form-label-custom">Specialization</label>
+                <label className="form-label-custom">{t('doctorSearch.specialization')}</label>
                 <div className="d-flex flex-column gap-2">
                   {SPECIALIZATIONS.map(spec => (
                     <label
@@ -177,14 +179,14 @@ export default function DoctorSearch() {
 
               {departments.length > 0 && (
                 <div className="mb-4">
-                  <label className="form-label-custom">Department</label>
+                  <label className="form-label-custom">{t('doctorSearch.department')}</label>
                   <select
                     id="doctor-filter-dept"
                     className="form-input-custom"
                     value={filters.department_id}
                     onChange={e => handleFilterChange('department_id', e.target.value)}
                   >
-                    <option value="">All Departments</option>
+                    <option value="">{t('doctorSearch.allDepartments')}</option>
                     {departments.map(d => (
                       <option key={d.id} value={d.id}>{d.name}</option>
                     ))}
@@ -205,7 +207,7 @@ export default function DoctorSearch() {
                   <div className="mb-5">
                     <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 16, color: 'var(--dark)' }}>
                       <i className="bi bi-hospital me-2 text-primary" />
-                      Hospitals <span style={{ color: 'var(--gray-400)', fontWeight: 500, fontSize: 14 }}>({hospitals.length})</span>
+                      {t('doctorSearch.hospitals')} <span style={{ color: 'var(--gray-400)', fontWeight: 500, fontSize: 14 }}>({hospitals.length})</span>
                     </h5>
                     <div className="row g-3 stagger-children">
                       {hospitals.map(h => (
@@ -225,7 +227,7 @@ export default function DoctorSearch() {
                                 <h6 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, margin: 0, color: 'var(--dark)' }} className="truncate">
                                   {h.name}
                                 </h6>
-                                {h.is_verified && <i className="bi bi-patch-check-fill" style={{ color: '#2DC653', fontSize: 13 }} title="Verified" />}
+                                {h.is_verified && <i className="bi bi-patch-check-fill" style={{ color: '#2DC653', fontSize: 13 }} title={t('doctorSearch.verified')} />}
                               </div>
                               {h.type && (
                                 <p style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600, margin: '2px 0 0' }}>
@@ -245,7 +247,7 @@ export default function DoctorSearch() {
                                   rel="noopener noreferrer"
                                   style={{ fontSize: 12, color: 'var(--primary)' }}
                                 >
-                                  <i className="bi bi-globe me-1" />Visit website
+                                  <i className="bi bi-globe me-1" />{t('doctorSearch.visitWebsite')}
                                 </a>
                               )}
                             </div>
@@ -259,7 +261,7 @@ export default function DoctorSearch() {
                 {/* Doctors section */}
                 <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 16, color: 'var(--dark)' }}>
                   <i className="bi bi-person-badge me-2 text-primary" />
-                  Doctors <span style={{ color: 'var(--gray-400)', fontWeight: 500, fontSize: 14 }}>({doctors.length})</span>
+                  {t('doctorSearch.doctors')} <span style={{ color: 'var(--gray-400)', fontWeight: 500, fontSize: 14 }}>({doctors.length})</span>
                 </h5>
 
                 {doctors.length === 0 ? (
@@ -267,11 +269,11 @@ export default function DoctorSearch() {
                     <i className="bi bi-person-x" />
                     <p>
                       {hasQuery
-                        ? 'No doctors found matching your search'
-                        : 'Start typing to search for doctors, specializations, or hospitals'}
+                        ? t('doctorSearch.noDoctorsFound')
+                        : t('doctorSearch.startTyping')}
                     </p>
                     {hasQuery && (
-                      <button className="btn-outline-custom mt-3" onClick={clearFilters}>Clear Search</button>
+                      <button className="btn-outline-custom mt-3" onClick={clearFilters}>{t('doctorSearch.clearSearch')}</button>
                     )}
                   </div>
                 ) : (

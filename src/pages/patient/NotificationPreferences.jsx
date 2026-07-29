@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../context/AuthContext'
 import { getNotificationPreferences, saveNotificationPreferences } from '../../services/notifications'
 import { toast } from 'react-toastify'
@@ -7,6 +8,7 @@ import Footer from '../../components/Footer'
 
 
 export default function NotificationPreferences() {
+  const { t } = useTranslation('patient')
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -46,9 +48,9 @@ export default function NotificationPreferences() {
         booking_alerts: prefs.booking_alerts,
         cancel_alerts: prefs.cancel_alerts
       })
-      toast.success('Notification preferences saved!')
+      toast.success(t('notificationPreferences.saved'))
     } catch (err) {
-      toast.error('Failed to save preferences')
+      toast.error(t('notificationPreferences.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -101,9 +103,9 @@ export default function NotificationPreferences() {
 
       <div className="page-header">
         <div className="container">
-          <div className="section-badge">Settings</div>
+          <div className="section-badge">{t('notificationPreferences.badge')}</div>
           <h1 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', color: 'white', fontFamily: 'var(--font-display)', position: 'relative', zIndex: 1 }}>
-            Notification Preferences
+            {t('notificationPreferences.title')}
           </h1>
         </div>
       </div>
@@ -113,15 +115,15 @@ export default function NotificationPreferences() {
         <div className="card-custom p-4 mb-4">
           <h6 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 20 }}>
             <i className="bi bi-broadcast me-2" style={{ color: 'var(--primary)' }} />
-            Notification Channels
+            {t('notificationPreferences.channels')}
           </h6>
 
           {/* Email */}
           <ToggleRow
             icon="bi-envelope"
             iconColor="var(--primary)"
-            label="Email Notifications"
-            description="Receive appointment updates via email"
+            label={t('notificationPreferences.emailLabel')}
+            description={t('notificationPreferences.emailDesc')}
             checked={prefs.email_enabled}
             onChange={(v) => updatePref('email_enabled', v)}
           />
@@ -132,8 +134,8 @@ export default function NotificationPreferences() {
           <ToggleRow
             icon="bi-bell"
             iconColor="var(--info)"
-            label="Push Notifications"
-            description="Browser push notifications for reminders"
+            label={t('notificationPreferences.pushLabel')}
+            description={t('notificationPreferences.pushDesc')}
             checked={prefs.push_enabled}
             onChange={(v) => updatePref('push_enabled', v)}
           />
@@ -143,14 +145,14 @@ export default function NotificationPreferences() {
         <div className="card-custom p-4 mb-4">
           <h6 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 20 }}>
             <i className="bi bi-list-check me-2" style={{ color: 'var(--primary)' }} />
-            Event Preferences
+            {t('notificationPreferences.eventPreferences')}
           </h6>
 
           <ToggleRow
             icon="bi-calendar-plus"
             iconColor="var(--primary)"
-            label="Booking Confirmations"
-            description="When an appointment is booked or confirmed"
+            label={t('notificationPreferences.bookingLabel')}
+            description={t('notificationPreferences.bookingDesc')}
             checked={prefs.booking_alerts}
             onChange={(v) => updatePref('booking_alerts', v)}
           />
@@ -160,8 +162,8 @@ export default function NotificationPreferences() {
           <ToggleRow
             icon="bi-alarm"
             iconColor="var(--warning)"
-            label="24-Hour Reminder"
-            description="Reminder 24 hours before your appointment"
+            label={t('notificationPreferences.reminder24hLabel')}
+            description={t('notificationPreferences.reminder24hDesc')}
             checked={prefs.reminder_24h}
             onChange={(v) => updatePref('reminder_24h', v)}
           />
@@ -171,8 +173,8 @@ export default function NotificationPreferences() {
           <ToggleRow
             icon="bi-bell"
             iconColor="var(--danger)"
-            label="1-Hour Reminder"
-            description="Reminder 1 hour before your appointment"
+            label={t('notificationPreferences.reminder1hLabel')}
+            description={t('notificationPreferences.reminder1hDesc')}
             checked={prefs.reminder_1h}
             onChange={(v) => updatePref('reminder_1h', v)}
           />
@@ -182,8 +184,8 @@ export default function NotificationPreferences() {
           <ToggleRow
             icon="bi-x-circle"
             iconColor="var(--danger)"
-            label="Cancellation Alerts"
-            description="When an appointment is cancelled"
+            label={t('notificationPreferences.cancelLabel')}
+            description={t('notificationPreferences.cancelDesc')}
             checked={prefs.cancel_alerts}
             onChange={(v) => updatePref('cancel_alerts', v)}
           />
@@ -196,7 +198,7 @@ export default function NotificationPreferences() {
           disabled={saving}
           style={{ padding: '14px 28px', fontSize: 16 }}
         >
-          {saving ? 'Saving...' : 'Save Preferences'}
+          {saving ? t('notificationPreferences.saving') : t('notificationPreferences.savePreferences')}
         </button>
       </div>
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../context/AuthContext'
 import {
   getMedicalHistory, upsertMedicalHistory,
@@ -10,22 +11,24 @@ import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 import { toast } from 'react-toastify'
 
-const TEXT_FIELDS = [
-  { key: 'medical_summary', label: 'Medical Summary', placeholder: 'A short overview of your overall health, recent diagnoses, etc.' },
-  { key: 'previous_concerns', label: 'Previous Doctor Concerns', placeholder: 'Concerns or notes raised by doctors you have seen before.' },
-  { key: 'current_medications', label: 'Current Medications', placeholder: 'Medicines you take regularly, with dosage if known.' },
-  { key: 'allergies', label: 'Allergies', placeholder: 'Drug, food or other allergies.' },
-  { key: 'chronic_conditions', label: 'Chronic Conditions', placeholder: 'Diabetes, hypertension, asthma, etc.' },
-  { key: 'other_info', label: 'Other Information', placeholder: 'Anything else a doctor should know.' },
-]
-
 const EMPTY = {
   medical_summary: '', previous_concerns: '', current_medications: '',
   allergies: '', chronic_conditions: '', other_info: '',
 }
 
 export default function MedicalHistory() {
+  const { t } = useTranslation('patient')
   const { user } = useAuth()
+
+  const TEXT_FIELDS = [
+    { key: 'medical_summary', label: t('medicalHistory.fieldMedicalSummary'), placeholder: t('medicalHistory.phMedicalSummary') },
+    { key: 'previous_concerns', label: t('medicalHistory.fieldPreviousConcerns'), placeholder: t('medicalHistory.phPreviousConcerns') },
+    { key: 'current_medications', label: t('medicalHistory.fieldCurrentMedications'), placeholder: t('medicalHistory.phCurrentMedications') },
+    { key: 'allergies', label: t('medicalHistory.fieldAllergies'), placeholder: t('medicalHistory.phAllergies') },
+    { key: 'chronic_conditions', label: t('medicalHistory.fieldChronicConditions'), placeholder: t('medicalHistory.phChronicConditions') },
+    { key: 'other_info', label: t('medicalHistory.fieldOtherInfo'), placeholder: t('medicalHistory.phOtherInfo') },
+  ]
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [fields, setFields] = useState(EMPTY)
@@ -50,7 +53,7 @@ export default function MedicalHistory() {
       }
       setGrouped(groupByCategory(docs))
     } catch (err) {
-      toast.error(err.message || 'Failed to load medical history.')
+      toast.error(err.message || t('medicalHistory.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -61,9 +64,9 @@ export default function MedicalHistory() {
     try {
       setSaving(true)
       await upsertMedicalHistory(user.id, fields)
-      toast.success('Medical history saved.')
+      toast.success(t('medicalHistory.saved'))
     } catch (err) {
-      toast.error(err.message || 'Could not save.')
+      toast.error(err.message || t('medicalHistory.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -75,9 +78,9 @@ export default function MedicalHistory() {
       await uploadMedicalDocument(user.id, category, file)
       const docs = await getMedicalDocuments(user.id)
       setGrouped(groupByCategory(docs))
-      toast.success('File uploaded.')
+      toast.success(t('medicalHistory.fileUploaded'))
     } catch (err) {
-      toast.error(err.message || 'Upload failed.')
+      toast.error(err.message || t('medicalHistory.uploadFailed'))
     } finally {
       setUploadingKey(null)
     }
@@ -88,9 +91,9 @@ export default function MedicalHistory() {
       await deleteMedicalDocument(docId)
       const docs = await getMedicalDocuments(user.id)
       setGrouped(groupByCategory(docs))
-      toast.success('File deleted.')
+      toast.success(t('medicalHistory.fileDeleted'))
     } catch (err) {
-      toast.error(err.message || 'Delete failed.')
+      toast.error(err.message || t('medicalHistory.deleteFailed'))
     }
   }
 
@@ -99,10 +102,9 @@ export default function MedicalHistory() {
       <Navbar />
       <div className="container" style={{ maxWidth: 880, padding: '32px 16px 64px' }}>
         <div className="mb-4">
-          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>My Medical History</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>{t('medicalHistory.title')}</h1>
           <p style={{ color: 'var(--gray-500)', margin: '6px 0 0' }}>
-            Keep your records here. You control who sees them — a doctor can view these
-            only after you grant access for an appointment.
+            {t('medicalHistory.subtitle')}
           </p>
         </div>
 
@@ -114,7 +116,7 @@ export default function MedicalHistory() {
           <>
             {/* ── Text fields ── */}
             <form onSubmit={handleSave} className="card-custom" style={{ padding: 24, marginBottom: 24 }}>
-              <h5 style={{ fontWeight: 600, marginBottom: 16 }}>Health Summary</h5>
+              <h5 style={{ fontWeight: 600, marginBottom: 16 }}>{t('medicalHistory.healthSummary')}</h5>
               {TEXT_FIELDS.map(f => (
                 <div key={f.key} className="mb-3">
                   <label className="form-label-custom">{f.label}</label>
@@ -129,15 +131,15 @@ export default function MedicalHistory() {
                 </div>
               ))}
               <button type="submit" className="btn-primary-custom" disabled={saving}>
-                {saving ? 'Saving...' : 'Save Summary'}
+                {saving ? t('medicalHistory.saving') : t('medicalHistory.saveSummary')}
               </button>
             </form>
 
             {/* ── Documents ── */}
             <div className="card-custom" style={{ padding: 24 }}>
-              <h5 style={{ fontWeight: 600, marginBottom: 4 }}>Documents</h5>
+              <h5 style={{ fontWeight: 600, marginBottom: 4 }}>{t('medicalHistory.documents')}</h5>
               <p style={{ fontSize: 13, color: 'var(--gray-500)', marginBottom: 16 }}>
-                Upload up to 3 files per section.
+                {t('medicalHistory.documentsHint')}
               </p>
               <MedicalDocumentUploader
                 grouped={grouped}

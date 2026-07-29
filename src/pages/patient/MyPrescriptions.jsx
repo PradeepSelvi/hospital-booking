@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../context/AuthContext'
 import { getMyPrescriptions } from '../../services/prescriptions'
 import { toast } from 'react-toastify'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 
-function statusStyle(status) {
-  if (status === 'CANCELLED') return { color: '#B91C1C', bg: 'rgba(239,35,60,0.08)', label: 'Cancelled' }
-  if (status === 'SUPERSEDED') return { color: 'var(--gray-500)', bg: 'var(--gray-100)', label: 'Replaced' }
-  return { color: '#16A34A', bg: 'rgba(34,197,94,0.08)', label: 'Active' }
+function statusStyle(status, t) {
+  if (status === 'CANCELLED') return { color: '#B91C1C', bg: 'rgba(239,35,60,0.08)', label: t('prescriptions.statusCancelled') }
+  if (status === 'SUPERSEDED') return { color: 'var(--gray-500)', bg: 'var(--gray-100)', label: t('prescriptions.statusReplaced') }
+  return { color: '#16A34A', bg: 'rgba(34,197,94,0.08)', label: t('prescriptions.statusActive') }
 }
 
 /** Build a printable text version of a prescription for download. */
@@ -32,6 +33,7 @@ function toPlainText(rx) {
 }
 
 export default function MyPrescriptions() {
+  const { t, i18n } = useTranslation('patient')
   const { user } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -42,7 +44,7 @@ export default function MyPrescriptions() {
       const data = await getMyPrescriptions(user.id)
       setItems(data)
     } catch {
-      toast.error('Could not load your prescriptions.')
+      toast.error(t('prescriptions.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -68,9 +70,9 @@ export default function MyPrescriptions() {
 
       <div className="page-header">
         <div className="container">
-          <div className="section-badge">My Health</div>
+          <div className="section-badge">{t('prescriptions.badge')}</div>
           <h1 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', color: 'white', fontFamily: 'var(--font-display)', position: 'relative', zIndex: 1 }}>
-            My Prescriptions
+            {t('prescriptions.title')}
           </h1>
         </div>
       </div>
@@ -81,12 +83,12 @@ export default function MyPrescriptions() {
         ) : items.length === 0 ? (
           <div className="text-center py-5" style={{ color: 'var(--gray-500)' }}>
             <i className="bi bi-capsule" style={{ fontSize: 40, opacity: 0.4 }} />
-            <p className="mt-3">You have no prescriptions yet. They appear here after a consultation.</p>
+            <p className="mt-3">{t('prescriptions.empty')}</p>
           </div>
         ) : (
           <div className="d-flex flex-column gap-3">
             {items.map((rx) => {
-              const s = statusStyle(rx.status)
+              const s = statusStyle(rx.status, t)
               const its = rx.prescription_items || []
               return (
                 <div key={rx.id} className="card-custom" style={{ padding: 20 }}>
@@ -98,13 +100,13 @@ export default function MyPrescriptions() {
                       </span>
                     </div>
                     <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>
-                      {rx.issued_at ? new Date(rx.issued_at).toLocaleDateString() : ''}
+                      {rx.issued_at ? new Date(rx.issued_at).toLocaleDateString(i18n.language) : ''}
                     </span>
                   </div>
 
                   {rx.diagnosis && (
                     <p style={{ fontSize: 13, margin: '0 0 8px' }}>
-                      <span style={{ color: 'var(--gray-500)', fontWeight: 500 }}>Diagnosis: </span>{rx.diagnosis}
+                      <span style={{ color: 'var(--gray-500)', fontWeight: 500 }}>{t('prescriptions.diagnosis')}</span>{rx.diagnosis}
                     </p>
                   )}
 
@@ -115,7 +117,7 @@ export default function MyPrescriptions() {
                         {it.strength ? ` ${it.strength}` : ''}{it.form ? ` (${it.form})` : ''}
                         <br />
                         <span style={{ color: 'var(--gray-600)' }}>
-                          {it.dosage} · {it.frequency} · {it.duration}{it.quantity ? ` · Qty ${it.quantity}` : ''}
+                          {it.dosage} · {it.frequency} · {it.duration}{it.quantity ? ` · ${t('prescriptions.qty', { count: it.quantity })}` : ''}
                         </span>
                         {it.instructions && <><br /><em style={{ color: 'var(--gray-500)' }}>{it.instructions}</em></>}
                       </li>
@@ -124,19 +126,19 @@ export default function MyPrescriptions() {
 
                   {rx.valid_until && (
                     <p style={{ fontSize: 12, color: 'var(--gray-500)', margin: '4px 0 0' }}>
-                      Valid until {rx.valid_until}
+                      {t('prescriptions.validUntil', { date: rx.valid_until })}
                     </p>
                   )}
                   {rx.status === 'CANCELLED' && rx.cancelled_reason && (
                     <p style={{ fontSize: 12, color: '#B91C1C', margin: '4px 0 0' }}>
-                      Cancelled: {rx.cancelled_reason}
+                      {t('prescriptions.cancelledReason', { reason: rx.cancelled_reason })}
                     </p>
                   )}
 
                   {rx.status !== 'CANCELLED' && (
                     <div className="mt-3">
                       <button className="btn-ghost" style={{ fontSize: 13 }} onClick={() => download(rx)}>
-                        <i className="bi bi-download me-1" /> Download
+                        <i className="bi bi-download me-1" /> {t('prescriptions.download')}
                       </button>
                     </div>
                   )}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { getPatientAppointments, cancelAppointment } from '../../services/appointments'
 import { createSwapOffer } from '../../services/swap'
@@ -14,6 +15,7 @@ import LiveEtaCard from '../../components/LiveEtaCard'
 import { SkeletonAppointmentCards } from '../../components/SkeletonLoader'
 
 export default function MyAppointments() {
+  const { t, i18n } = useTranslation('patient')
   const { user, profile } = useAuth()
   const navigate = useNavigate()
   const [appointments, setAppointments] = useState([])
@@ -34,7 +36,7 @@ export default function MyAppointments() {
       const data = await getPatientAppointments(user.id)
       setAppointments(data)
     } catch (err) {
-      toast.error('Failed to load appointments')
+      toast.error(t('myAppointments.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -44,9 +46,9 @@ export default function MyAppointments() {
     try {
       setOfferingId(apt.id)
       await createSwapOffer(apt.id)
-      toast.success('Slot offered for swap. You\'ll earn a co-pay discount if someone takes it.')
+      toast.success(t('myAppointments.swapOffered'))
     } catch (err) {
-      toast.error(err.message || 'Could not offer this slot.')
+      toast.error(err.message || t('myAppointments.swapOfferFailed'))
     } finally {
       setOfferingId(null)
     }
@@ -57,29 +59,29 @@ export default function MyAppointments() {
       const conv = await getOrCreateConversation(user.id, apt.doctor_id)
       navigate('/patient/messages', { state: { conversationId: conv.id } })
     } catch (err) {
-      toast.error(err.message || 'Could not open chat.')
+      toast.error(err.message || t('myAppointments.chatOpenFailed'))
     }
   }
 
   async function handleCancel() {
     if (!cancelModal) return
     if (!cancelReason.trim()) {
-      toast.error('Please provide a reason for cancellation')
+      toast.error(t('myAppointments.reasonRequired'))
       return
     }
     if (cancelReason.length > 300) {
-      toast.error('Reason must be under 300 characters')
+      toast.error(t('myAppointments.reasonTooLong'))
       return
     }
     try {
       setCancelling(true)
       await cancelAppointment(cancelModal.id, cancelReason.trim(), 'PATIENT')
-      toast.success('Appointment cancelled')
+      toast.success(t('myAppointments.cancelled'))
       setCancelModal(null)
       setCancelReason('')
       loadAppointments()
     } catch (err) {
-      toast.error('Failed to cancel appointment')
+      toast.error(t('myAppointments.cancelFailed'))
     } finally {
       setCancelling(false)
     }
@@ -108,9 +110,9 @@ export default function MyAppointments() {
 
       <div className="page-header">
         <div className="container">
-          <div className="section-badge">My Health</div>
+          <div className="section-badge">{t('myAppointments.badge')}</div>
           <h1 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', color: 'white', fontFamily: 'var(--font-display)', position: 'relative', zIndex: 1 }}>
-            My Appointments
+            {t('myAppointments.title')}
           </h1>
         </div>
       </div>
@@ -119,21 +121,21 @@ export default function MyAppointments() {
         {/* Tabs */}
         <div className="d-flex gap-2 mb-4 align-items-center flex-wrap">
           {[
-            { key: 'upcoming', label: 'Upcoming', icon: 'bi-calendar-event' },
-            { key: 'past', label: 'Past', icon: 'bi-clock-history' },
-            { key: 'cancelled', label: 'Cancelled', icon: 'bi-x-circle' },
-          ].map(t => (
+            { key: 'upcoming', label: t('myAppointments.tabUpcoming'), icon: 'bi-calendar-event' },
+            { key: 'past', label: t('myAppointments.tabPast'), icon: 'bi-clock-history' },
+            { key: 'cancelled', label: t('myAppointments.tabCancelled'), icon: 'bi-x-circle' },
+          ].map(tabItem => (
             <button
-              key={t.key}
+              key={tabItem.key}
               className={`btn-ghost d-flex align-items-center gap-2`}
               style={{
-                background: tab === t.key ? 'var(--primary)' : undefined,
-                color: tab === t.key ? 'white' : undefined,
+                background: tab === tabItem.key ? 'var(--primary)' : undefined,
+                color: tab === tabItem.key ? 'white' : undefined,
               }}
-              onClick={() => setTab(t.key)}
+              onClick={() => setTab(tabItem.key)}
             >
-              <i className={`bi ${t.icon}`} />
-              {t.label}
+              <i className={`bi ${tabItem.icon}`} />
+              {tabItem.label}
             </button>
           ))}
           <Link
@@ -142,7 +144,7 @@ export default function MyAppointments() {
             style={{ color: 'var(--primary)' }}
           >
             <i className="bi bi-arrow-left-right" />
-            Swap Market
+            {t('myAppointments.swapMarket')}
           </Link>
         </div>
 
@@ -151,9 +153,9 @@ export default function MyAppointments() {
         ) : filtered.length === 0 ? (
           <div className="empty-state">
             <i className="bi bi-calendar-x" />
-            <p>No {tab} appointments found</p>
+            <p>{t(`myAppointments.empty_${tab}`)}</p>
             <Link to="/doctors" className="btn-primary-custom mt-3">
-              Find a Doctor <i className="bi bi-arrow-right" />
+              {t('myAppointments.findADoctor')} <i className="bi bi-arrow-right" />
             </Link>
           </div>
         ) : (
@@ -168,7 +170,7 @@ export default function MyAppointments() {
                       </div>
                       <div>
                         <h6 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, margin: 0 }}>
-                          Dr. {apt.doctors?.profiles?.name ?? 'Doctor'}
+                          Dr. {apt.doctors?.profiles?.name ?? t('myAppointments.doctorFallback')}
                         </h6>
                         <span style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 500 }}>
                           {apt.doctors?.specialization ?? ''}
@@ -182,7 +184,7 @@ export default function MyAppointments() {
                     <div className="d-flex align-items-center gap-2">
                       <i className="bi bi-calendar3" style={{ color: 'var(--primary)', fontSize: 14 }} />
                       <span style={{ fontSize: 14 }}>
-                        {new Date(apt.appointment_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                        {new Date(apt.appointment_date + 'T00:00:00').toLocaleDateString(i18n.language, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
                     </div>
                     <div className="d-flex align-items-center gap-2">
@@ -206,7 +208,7 @@ export default function MyAppointments() {
                   {apt.cancel_reason && (
                     <div className="alert-custom alert-danger" style={{ padding: '8px 12px', fontSize: 13, marginBottom: 12 }}>
                       <i className="bi bi-info-circle" />
-                      <span>Cancellation: {apt.cancel_reason}</span>
+                      <span>{t('myAppointments.cancellation', { reason: apt.cancel_reason })}</span>
                     </div>
                   )}
 
@@ -223,7 +225,7 @@ export default function MyAppointments() {
                         style={{ borderColor: 'var(--danger)', color: 'var(--danger)', padding: '8px 16px', fontSize: 13 }}
                         onClick={() => setCancelModal(apt)}
                       >
-                        <i className="bi bi-x-circle" /> Cancel Appointment
+                        <i className="bi bi-x-circle" /> {t('myAppointments.cancelAppointment')}
                       </button>
                     )}
 
@@ -236,7 +238,7 @@ export default function MyAppointments() {
                       style={{ padding: '8px 16px', fontSize: 13 }}
                       onClick={() => handleMessage(apt)}
                     >
-                      <i className="bi bi-chat-dots" /> Message Doctor
+                      <i className="bi bi-chat-dots" /> {t('myAppointments.messageDoctor')}
                     </button>
 
                     {['PENDING', 'CONFIRMED'].includes(apt.status) && apt.appointment_date >= today && (
@@ -245,9 +247,9 @@ export default function MyAppointments() {
                         style={{ padding: '8px 16px', fontSize: 13, color: 'var(--primary)' }}
                         disabled={offeringId === apt.id}
                         onClick={() => handleOfferSwap(apt)}
-                        title="Offer this slot to someone who needs it sooner and earn a co-pay discount"
+                        title={t('myAppointments.offerSwapTitle')}
                       >
-                        <i className="bi bi-arrow-left-right" /> {offeringId === apt.id ? 'Offering…' : 'Offer for Swap'}
+                        <i className="bi bi-arrow-left-right" /> {offeringId === apt.id ? t('myAppointments.offering') : t('myAppointments.offerForSwap')}
                       </button>
                     )}
                   </div>
@@ -268,16 +270,16 @@ export default function MyAppointments() {
             zIndex: 1001, width: '90%', maxWidth: 420, boxShadow: '0 24px 80px rgba(0,0,0,0.2)'
           }}>
             <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 8, color: 'var(--danger)' }}>
-              <i className="bi bi-exclamation-triangle me-2" />Cancel Appointment
+              <i className="bi bi-exclamation-triangle me-2" />{t('myAppointments.cancelAppointment')}
             </h5>
             <p style={{ fontSize: 14, color: 'var(--gray-500)', marginBottom: 16 }}>
-              Are you sure you want to cancel your appointment with Dr. {cancelModal.doctors?.profiles?.name}?
+              {t('myAppointments.cancelConfirm', { name: cancelModal.doctors?.profiles?.name })}
             </p>
-            <label className="form-label-custom">Reason for cancellation *</label>
+            <label className="form-label-custom">{t('myAppointments.reasonLabel')}</label>
             <textarea
               className="form-input-custom mb-2"
               rows={3}
-              placeholder="Please provide a reason..."
+              placeholder={t('myAppointments.reasonPlaceholder')}
               value={cancelReason}
               onChange={e => setCancelReason(e.target.value)}
               maxLength={300}
@@ -287,7 +289,7 @@ export default function MyAppointments() {
             </div>
             <div className="d-flex gap-3">
               <button className="btn-ghost flex-fill" onClick={() => { setCancelModal(null); setCancelReason('') }}>
-                Keep Appointment
+                {t('myAppointments.keepAppointment')}
               </button>
               <button
                 className="flex-fill"
@@ -299,7 +301,7 @@ export default function MyAppointments() {
                 onClick={handleCancel}
                 disabled={cancelling}
               >
-                {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
+                {cancelling ? t('myAppointments.cancelling') : t('myAppointments.yesCancel')}
               </button>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../context/AuthContext'
 import {
   getProfile, updateProfile, getPatientDetails, updatePatientDetails,
@@ -18,6 +19,7 @@ import AIWriteAssistant from '../../components/AIWriteAssistant'
 import AccountClosure from '../../components/AccountClosure'
 
 export default function PatientProfile() {
+  const { t, i18n } = useTranslation('patient')
   const { user, profile: authProfile, refreshProfile } = useAuth()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -86,7 +88,7 @@ export default function PatientProfile() {
       setCompleteness(calculateCompleteness(profile, patientDetails))
     } catch (err) {
       console.error('Failed to load profile data:', err)
-      toast.error('Failed to load profile data')
+      toast.error(t('profile.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -120,9 +122,9 @@ export default function PatientProfile() {
         gender: profileData.gender || null
       })
       await refreshProfile()
-      toast.success('Personal information saved!')
+      toast.success(t('profile.personalSaved'))
     } catch (err) {
-      toast.error('Failed to save. Please try again.')
+      toast.error(t('profile.saveFailed'))
     } finally {
       setSaving(false)
     }
@@ -141,9 +143,9 @@ export default function PatientProfile() {
     try {
       setSaving(true)
       await updatePatientDetails(user.id, medicalData)
-      toast.success('Medical information saved!')
+      toast.success(t('profile.medicalSaved'))
     } catch (err) {
-      toast.error('Failed to save medical info.')
+      toast.error(t('profile.medicalSaveFailed'))
     } finally {
       setSaving(false)
     }
@@ -155,9 +157,9 @@ export default function PatientProfile() {
       const url = await uploadAvatar(user.id, file)
       setProfileData(prev => ({ ...prev, avatar_url: url }))
       await refreshProfile()
-      toast.success('Profile photo updated!')
+      toast.success(t('profile.photoUpdated'))
     } catch (err) {
-      toast.error('Failed to upload photo: ' + (err.message || 'Unknown error'))
+      toast.error(t('profile.photoUploadFailed', { error: err.message || t('profile.unknownError') }))
     } finally {
       setUploading(false)
     }
@@ -169,9 +171,9 @@ export default function PatientProfile() {
       await deleteAvatar(user.id)
       setProfileData(prev => ({ ...prev, avatar_url: null }))
       await refreshProfile()
-      toast.success('Profile photo removed')
+      toast.success(t('profile.photoRemoved'))
     } catch (err) {
-      toast.error('Failed to remove photo')
+      toast.error(t('profile.photoRemoveFailed'))
     } finally {
       setUploading(false)
     }
@@ -193,15 +195,15 @@ export default function PatientProfile() {
       {/* Page Header */}
       <div className="page-header">
         <div className="container">
-          <div className="section-badge">Profile</div>
+          <div className="section-badge">{t('profile.badge')}</div>
           <h1 style={{
             fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', color: 'white',
             fontFamily: 'var(--font-display)', position: 'relative', zIndex: 1
           }}>
-            My Profile
+            {t('profile.title')}
           </h1>
           <p style={{ color: 'rgba(255,255,255,0.7)', marginTop: 6, fontSize: 15, position: 'relative', zIndex: 1 }}>
-            Manage your personal information, medical details, and account security
+            {t('profile.subtitle')}
           </p>
         </div>
       </div>
@@ -225,10 +227,10 @@ export default function PatientProfile() {
 
               <div className="profile-card-info">
                 <h5 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 4 }}>
-                  {profileData.name || 'Patient'}
+                  {profileData.name || t('profile.patient')}
                 </h5>
               </div>
-              <span className="badge-confirmed" style={{ fontSize: 11 }}>Patient</span>
+              <span className="badge-confirmed" style={{ fontSize: 11 }}>{t('profile.patient')}</span>
 
               <hr className="divider" />
 
@@ -245,8 +247,8 @@ export default function PatientProfile() {
                 <div className="d-flex align-items-center gap-2">
                   <i className="bi bi-calendar3" style={{ color: 'var(--gray-400)', width: 20, flexShrink: 0 }} />
                   <span className="profile-contact-text">
-                    Joined {authProfile?.created_at
-                      ? new Date(authProfile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                    {authProfile?.created_at
+                      ? t('profile.joined', { date: new Date(authProfile.created_at).toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' }) })
                       : '—'
                     }
                   </span>
@@ -258,7 +260,7 @@ export default function PatientProfile() {
               {/* Completeness */}
               <div className="mb-3">
                 <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gray-600)' }}>Profile Complete</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gray-600)' }}>{t('profile.profileComplete')}</span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: completeness === 100 ? 'var(--success)' : 'var(--primary)' }}>
                     {completeness}%
                   </span>
@@ -279,9 +281,9 @@ export default function PatientProfile() {
               {/* Quick Stats */}
               <div className="d-flex gap-2 mt-3">
                 {[
-                  { value: stats.total, label: 'Total', color: 'var(--primary)' },
-                  { value: stats.upcoming, label: 'Upcoming', color: 'var(--warning)' },
-                  { value: stats.completed, label: 'Done', color: 'var(--success)' }
+                  { value: stats.total, label: t('profile.statTotal'), color: 'var(--primary)' },
+                  { value: stats.upcoming, label: t('profile.statUpcoming'), color: 'var(--warning)' },
+                  { value: stats.completed, label: t('profile.statDone'), color: 'var(--success)' }
                 ].map((s, i) => (
                   <div key={i} className="profile-stat">
                     <div className="profile-stat-value" style={{ color: s.color }}>{s.value}</div>
@@ -295,7 +297,7 @@ export default function PatientProfile() {
           {/* ── Right Column: Tabbed Content ── */}
           <div className="col-lg-8">
             <ProfileTabs
-              tabs={['Personal Info', 'Medical Details', 'Security']}
+              tabs={[t('profile.tabPersonal'), t('profile.tabMedical'), t('profile.tabSecurity')]}
               activeTab={activeTab}
               onChange={setActiveTab}
               icons={['bi-person', 'bi-heart-pulse', 'bi-shield-lock']}
@@ -306,17 +308,17 @@ export default function PatientProfile() {
               <div className="card-custom p-4 mt-3 animate-fadeInUp">
                 <h6 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 20 }}>
                   <i className="bi bi-person-lines-fill me-2 text-primary" />
-                  Personal Information
+                  {t('profile.personalInfo')}
                 </h6>
                 <form onSubmit={handleSavePersonal}>
                   <div className="row g-3">
                     <div className="col-md-6">
-                      <label className="form-label-custom" htmlFor="profile-name">Full Name *</label>
+                      <label className="form-label-custom" htmlFor="profile-name">{t('profile.fullName')}</label>
                       <input
                         id="profile-name"
                         type="text"
                         className="form-input-custom"
-                        placeholder="John Doe"
+                        placeholder={t('profile.fullNamePlaceholder')}
                         value={profileData.name}
                         onChange={e => setProfileData(prev => ({ ...prev, name: e.target.value }))}
                         required
@@ -324,19 +326,19 @@ export default function PatientProfile() {
                       />
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label-custom" htmlFor="profile-phone">Phone Number</label>
+                      <label className="form-label-custom" htmlFor="profile-phone">{t('profile.phoneNumber')}</label>
                       <input
                         id="profile-phone"
                         type="tel"
                         className="form-input-custom"
-                        placeholder="+91 98765 43210"
+                        placeholder={t('profile.phonePlaceholder')}
                         value={profileData.phone}
                         onChange={e => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
                         maxLength={15}
                       />
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label-custom">Date of Birth</label>
+                      <label className="form-label-custom">{t('profile.dateOfBirth')}</label>
                       <input
                         id="profile-dob"
                         type="date"
@@ -346,35 +348,35 @@ export default function PatientProfile() {
                       />
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label-custom">Gender</label>
+                      <label className="form-label-custom">{t('profile.gender')}</label>
                       <select
                         id="profile-gender"
                         className="form-input-custom"
                         value={profileData.gender}
                         onChange={e => setProfileData(prev => ({ ...prev, gender: e.target.value }))}
                       >
-                        <option value="">Select Gender</option>
-                        <option value="MALE">Male</option>
-                        <option value="FEMALE">Female</option>
-                        <option value="OTHER">Other</option>
+                        <option value="">{t('profile.selectGender')}</option>
+                        <option value="MALE">{t('profile.male')}</option>
+                        <option value="FEMALE">{t('profile.female')}</option>
+                        <option value="OTHER">{t('profile.other')}</option>
                       </select>
                     </div>
                     <div className="col-12">
                       <div className="d-flex align-items-center justify-content-between mb-1">
-                        <label className="form-label-custom mb-0" htmlFor="profile-bio">About Me</label>
+                        <label className="form-label-custom mb-0" htmlFor="profile-bio">{t('profile.aboutMe')}</label>
                         <AIWriteAssistant
                           fieldName="bio"
                           currentValue={profileData.bio}
                           context={{ name: profileData.name, role: 'patient' }}
                           onGenerated={(text) => setProfileData(prev => ({ ...prev, bio: text }))}
-                          placeholder="AI writes a personal bio for you"
+                          placeholder={t('profile.aiBioPlaceholder')}
                         />
                       </div>
                       <textarea
                         id="profile-bio"
                         className="form-input-custom"
                         rows={3}
-                        placeholder="Tell us a little about yourself..."
+                        placeholder={t('profile.bioPlaceholder')}
                         value={profileData.bio}
                         onChange={e => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
                         maxLength={500}
@@ -388,13 +390,13 @@ export default function PatientProfile() {
                   <div className="d-flex justify-content-between align-items-center mt-4">
                     <span style={{ fontSize: 13, color: 'var(--gray-400)' }}>
                       <i className="bi bi-info-circle me-1" />
-                      Email cannot be changed
+                      {t('profile.emailCannotChange')}
                     </span>
                     <button type="submit" className="btn-primary-custom" disabled={saving}>
                       {saving ? (
-                        <><div className="spinner-custom" style={{ width: 18, height: 18, borderWidth: 2 }} /> Saving...</>
+                        <><div className="spinner-custom" style={{ width: 18, height: 18, borderWidth: 2 }} /> {t('profile.saving')}</>
                       ) : (
-                        <><i className="bi bi-check-lg" /> Save Changes</>
+                        <><i className="bi bi-check-lg" /> {t('profile.saveChanges')}</>
                       )}
                     </button>
                   </div>
@@ -407,35 +409,35 @@ export default function PatientProfile() {
               <div className="card-custom p-4 mt-3 animate-fadeInUp">
                 <h6 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 8 }}>
                   <i className="bi bi-heart-pulse me-2 text-primary" />
-                  Medical Information
+                  {t('profile.medicalInfo')}
                 </h6>
                 <p style={{ fontSize: 13, color: 'var(--gray-400)', marginBottom: 20 }}>
-                  This information helps doctors provide better care. All data is kept strictly confidential.
+                  {t('profile.medicalInfoHint')}
                 </p>
 
                 <form onSubmit={handleSaveMedical}>
                   <div className="row g-3">
                     <div className="col-md-6">
-                      <label className="form-label-custom">Blood Group</label>
+                      <label className="form-label-custom">{t('profile.bloodGroup')}</label>
                       <select
                         id="medical-blood-group"
                         className="form-input-custom"
                         value={medicalData.blood_group}
                         onChange={e => setMedicalData(prev => ({ ...prev, blood_group: e.target.value }))}
                       >
-                        <option value="">Select Blood Group</option>
+                        <option value="">{t('profile.selectBloodGroup')}</option>
                         {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
                           <option key={bg} value={bg}>{bg}</option>
                         ))}
                       </select>
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label-custom" htmlFor="medical-emergency">Emergency Contact</label>
+                      <label className="form-label-custom" htmlFor="medical-emergency">{t('profile.emergencyContact')}</label>
                       <input
                         id="medical-emergency"
                         type="tel"
                         className="form-input-custom"
-                        placeholder="Emergency phone number"
+                        placeholder={t('profile.emergencyPlaceholder')}
                         value={medicalData.emergency_contact}
                         onChange={e => setMedicalData(prev => ({ ...prev, emergency_contact: e.target.value }))}
                         maxLength={15}
@@ -443,20 +445,20 @@ export default function PatientProfile() {
                     </div>
                     <div className="col-12">
                       <div className="d-flex align-items-center justify-content-between mb-1">
-                        <label className="form-label-custom mb-0" htmlFor="medical-address">Address</label>
+                        <label className="form-label-custom mb-0" htmlFor="medical-address">{t('profile.address')}</label>
                         <AIWriteAssistant
                           fieldName="address"
                           currentValue={medicalData.address}
                           context={{ name: profileData.name, role: 'patient' }}
                           onGenerated={(text) => setMedicalData(prev => ({ ...prev, address: text }))}
-                          placeholder="AI formats your address neatly"
+                          placeholder={t('profile.aiAddressPlaceholder')}
                         />
                       </div>
                       <textarea
                         id="medical-address"
                         className="form-input-custom"
                         rows={3}
-                        placeholder="Your residential address..."
+                        placeholder={t('profile.addressPlaceholder')}
                         value={medicalData.address}
                         onChange={e => setMedicalData(prev => ({ ...prev, address: e.target.value }))}
                         maxLength={500}
@@ -469,9 +471,9 @@ export default function PatientProfile() {
 
                   <button type="submit" className="btn-primary-custom mt-4" disabled={saving}>
                     {saving ? (
-                      <><div className="spinner-custom" style={{ width: 18, height: 18, borderWidth: 2 }} /> Saving...</>
+                      <><div className="spinner-custom" style={{ width: 18, height: 18, borderWidth: 2 }} /> {t('profile.saving')}</>
                     ) : (
-                      <><i className="bi bi-check-lg" /> Save Medical Info</>
+                      <><i className="bi bi-check-lg" /> {t('profile.saveMedicalInfo')}</>
                     )}
                   </button>
                 </form>
@@ -485,7 +487,7 @@ export default function PatientProfile() {
                 <div className="card-custom p-4 mt-3">
                   <h6 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 20 }}>
                     <i className="bi bi-key me-2 text-primary" />
-                    Change Password
+                    {t('profile.changePassword')}
                   </h6>
                   <PasswordChange />
                 </div>
@@ -494,28 +496,28 @@ export default function PatientProfile() {
                 <div className="card-custom p-4 mt-3">
                   <h6 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, marginBottom: 16 }}>
                     <i className="bi bi-info-circle me-2 text-primary" />
-                    Account Information
+                    {t('profile.accountInfo')}
                   </h6>
                   <div className="d-flex flex-column gap-3">
                     <div className="d-flex justify-content-between" style={{ fontSize: 14 }}>
-                      <span style={{ color: 'var(--gray-500)' }}>Email</span>
+                      <span style={{ color: 'var(--gray-500)' }}>{t('profile.email')}</span>
                       <span style={{ fontWeight: 600 }}>{user?.email}</span>
                     </div>
                     <div className="d-flex justify-content-between" style={{ fontSize: 14 }}>
-                      <span style={{ color: 'var(--gray-500)' }}>Role</span>
-                      <span className="badge-confirmed" style={{ fontSize: 11 }}>Patient</span>
+                      <span style={{ color: 'var(--gray-500)' }}>{t('profile.role')}</span>
+                      <span className="badge-confirmed" style={{ fontSize: 11 }}>{t('profile.patient')}</span>
                     </div>
                     <div className="d-flex justify-content-between" style={{ fontSize: 14 }}>
-                      <span style={{ color: 'var(--gray-500)' }}>Account Status</span>
+                      <span style={{ color: 'var(--gray-500)' }}>{t('profile.accountStatus')}</span>
                       <span style={{ fontWeight: 600, color: 'var(--success)' }}>
-                        <i className="bi bi-check-circle-fill me-1" />Active
+                        <i className="bi bi-check-circle-fill me-1" />{t('profile.active')}
                       </span>
                     </div>
                     <div className="d-flex justify-content-between" style={{ fontSize: 14 }}>
-                      <span style={{ color: 'var(--gray-500)' }}>Member Since</span>
+                      <span style={{ color: 'var(--gray-500)' }}>{t('profile.memberSince')}</span>
                       <span style={{ fontWeight: 600 }}>
                         {authProfile?.created_at
-                          ? new Date(authProfile.created_at).toLocaleDateString('en-US', {
+                          ? new Date(authProfile.created_at).toLocaleDateString(i18n.language, {
                               month: 'long', day: 'numeric', year: 'numeric'
                             })
                           : '—'
