@@ -86,9 +86,45 @@ export default function Navbar() {
             <Link to="/doctors" className={`nav-link-custom ${isActive('/doctors') ? 'active' : ''}`}>
               {t('nav.findDoctors')}
             </Link>
-            <Link to="/govt-hospitals" className={`nav-link-custom ${isActive('/govt-hospitals') ? 'active' : ''}`}>
-              {t('nav.hospitalSearch')}
-            </Link>
+
+            {/* Hospitals — groups the two discovery experiences so both are reachable */}
+            <div className="dropdown">
+              <button
+                type="button"
+                className={`nav-link-custom dropdown-toggle ${isActive('/hospitals') || isActive('/govt-hospitals') ? 'active' : ''}`}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                aria-label={t('nav.hospitals')}
+              >
+                {t('nav.hospitals')}
+              </button>
+              <ul className="dropdown-menu shadow-lg border-0" style={{ borderRadius: 'var(--radius-md)', minWidth: 260 }}>
+                <li>
+                  <Link className="dropdown-item py-2" to="/hospitals">
+                    <div className="d-flex align-items-start gap-2">
+                      <i className="bi bi-geo-alt-fill mt-1" style={{ color: 'var(--primary)' }} />
+                      <span>
+                        <span style={{ fontWeight: 600, display: 'block' }}>{t('nav.findRateHospitals')}</span>
+                        <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>{t('nav.findRateHospitalsDesc')}</span>
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+                <li><hr className="dropdown-divider" /></li>
+                <li>
+                  <Link className="dropdown-item py-2" to="/govt-hospitals">
+                    <div className="d-flex align-items-start gap-2">
+                      <i className="bi bi-hospital mt-1" style={{ color: '#059669' }} />
+                      <span>
+                        <span style={{ fontWeight: 600, display: 'block' }}>{t('nav.govtHospitals')}</span>
+                        <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>{t('nav.govtHospitalsDesc')}</span>
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              </ul>
+            </div>
 
             {!user ? (
               <>
@@ -110,6 +146,9 @@ export default function Navbar() {
                     </Link>
                     <Link to="/patient/appointments" className={`nav-link-custom ${isActive('/patient/appointments') ? 'active' : ''}`}>
                       {t('nav.myAppointments')}
+                    </Link>
+                    <Link to="/patient/swaps" className={`nav-link-custom ${isActive('/patient/swaps') ? 'active' : ''}`}>
+                      {t('nav.swapMarket')}
                     </Link>
                     <Link to="/patient/medical-history" className={`nav-link-custom ${isActive('/patient/medical-history') ? 'active' : ''}`}>
                       {t('nav.medicalHistory')}

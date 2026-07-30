@@ -7,7 +7,12 @@
   "nav": {
     "home": "Home",
     "findDoctors": "Find Doctors",
-    "hospitalSearch": "Hospital Search",
+    "hospitals": "Hospitals",
+    "findRateHospitals": "Find & Rate Hospitals",
+    "findRateHospitalsDesc": "Map, patient reviews & top-rated care near you",
+    "govtHospitals": "Government Hospitals",
+    "govtHospitalsDesc": "Search the India-wide public hospital directory",
+    "swapMarket": "Swap Market",
     "joinAsDoctor": "Join as Doctor",
     "login": "Login",
     "register": "Register",

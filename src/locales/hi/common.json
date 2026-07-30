@@ -7,7 +7,12 @@
   "nav": {
     "home": "होम",
     "findDoctors": "डॉक्टर खोजें",
-    "hospitalSearch": "अस्पताल खोज",
+    "hospitals": "अस्पताल",
+    "findRateHospitals": "अस्पताल खोजें और रेट करें",
+    "findRateHospitalsDesc": "नक्शा, मरीज़ों की समीक्षाएं और आपके पास बेहतरीन देखभाल",
+    "govtHospitals": "सरकारी अस्पताल",
+    "govtHospitalsDesc": "पूरे भारत की सार्वजनिक अस्पताल निर्देशिका खोजें",
+    "swapMarket": "स्वैप मार्केट",
     "joinAsDoctor": "डॉक्टर के रूप में जुड़ें",
     "login": "लॉगिन",
     "register": "रजिस्टर करें",
