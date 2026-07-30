@@ -221,7 +221,14 @@ export async function upsertPlaceReview({ place, userId, rating, comment, review
     .upsert(row, { onConflict: 'user_id,place_key' })
     .select()
     .single()
-  if (error) throw error
+  if (error) {
+    // Server-side daily anti-spam cap (migration 038). Surface a clean,
+    // user-friendly message instead of the raw Postgres error.
+    if (error.code === 'P0001' || /daily review limit/i.test(error.message || '')) {
+      throw new Error('You have reached the daily limit of 20 hospital reviews. Please try again tomorrow.')
+    }
+    throw error
+  }
   return data
 }
 
