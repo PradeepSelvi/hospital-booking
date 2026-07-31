@@ -2555,6 +2555,25 @@ body.nav-open {
   background: #059669;
   box-shadow: 0 4px 12px rgba(5,150,105,0.4);
 }
+/* Complete-directory ("Other hospitals") pin */
+.hospital-marker-pin.dictionary {
+  background: #D97706;
+  box-shadow: 0 4px 12px rgba(217,119,6,0.4);
+}
+
+/* Leaflet fullscreen control button */
+.leaflet-control-fullscreen {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
+  color: #333;
+  background: #fff;
+}
+.leaflet-control-fullscreen:hover { background: #f4f4f4; }
+.hospital-map-wrapper:fullscreen .hospital-map-container { height: 100vh !important; border-radius: 0 !important; }
 
 /* ── Government hospital search: result cards + chips ── */
 .govt-result-card {

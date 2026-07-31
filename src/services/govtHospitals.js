@@ -228,6 +228,38 @@ export async function getGovtHospitalsNear(lat, lng, radiusKm = 25, limit = 150)
 }
 
 /**
+ * Complete hospital directory (government + private + uncategorised) for the
+ * "Other hospitals" map layer on the Find & Rate page. Only rows that carry
+ * parseable coordinates can be mapped, so we request just those. Reads from the
+ * UNFILTERED `all_hospitals_v` view (migration 039) — distinct from the
+ * government-only `govt_hospitals_v`.
+ *
+ * @param {number} limit  hard cap on markers fetched (default 3000)
+ * @returns {Promise<Array>} normalized, mappable directory places
+ */
+export async function getAllMappableHospitals(limit = 3000) {
+  const { data, error } = await supabase
+    .from('all_hospitals_v')
+    .select(
+      'sr_no, name, state, district, town, pincode, address, category, care_type, ' +
+      'discipline, specialties, facilities, telephone, mobile, website, total_beds, latitude, longitude'
+    )
+    .not('latitude', 'is', null)
+    .not('longitude', 'is', null)
+    .limit(limit)
+  if (error) throw error
+
+  return (data ?? []).map(row => {
+    const norm = normalizeGovtRow(row)
+    // Distinguish full-directory pins from the government-only search results.
+    norm.dictionary = true
+    norm.govt = /government/i.test(row.category || '')
+    norm.placeKey = `dir:${row.sr_no}`
+    return norm
+  })
+}
+
+/**
  * Distinct filter options for the dropdowns (states, care types, disciplines).
  */
 export async function getGovtFilterOptions() {

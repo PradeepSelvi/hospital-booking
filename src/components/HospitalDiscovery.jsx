@@ -10,6 +10,7 @@ import {
   upsertPlaceReview,
 } from '../services/reviews'
 import { getHospitalsNear, searchExternalHospitals } from '../services/places'
+import { getAllMappableHospitals } from '../services/govtHospitals'
 import { getPhotoUrl } from '../services/hospital'
 import HospitalsMap from './HospitalsMap'
 
@@ -41,6 +42,9 @@ export default function HospitalDiscovery() {
   const [ours, setOurs] = useState([])
   const [ranked, setRanked] = useState([])
   const [externalPins, setExternalPins] = useState([]) // discovered OSM hospitals
+  const [otherPins, setOtherPins] = useState([])       // complete directory ("Other hospitals")
+  const [showOthers, setShowOthers] = useState(false)
+  const [loadingOthers, setLoadingOthers] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const [userLocation, setUserLocation] = useState(null)
@@ -79,18 +83,43 @@ export default function HospitalDiscovery() {
 
   useEffect(() => { loadCore() }, [loadCore])
 
-  // Merge our hospitals (with coords) + discovered external pins for the map.
+  // Merge our hospitals (with coords) + discovered external pins + (optionally)
+  // the complete hospital directory for the map.
   const mapPlaces = useMemo(() => {
     const seen = new Set()
     const out = []
-    for (const p of [...ours, ...externalPins]) {
+    const sources = showOthers ? [ours, externalPins, otherPins] : [ours, externalPins]
+    for (const p of sources.flat()) {
       if (p.latitude == null || p.longitude == null) continue
       if (seen.has(p.placeKey)) continue
       seen.add(p.placeKey)
       out.push(p)
     }
     return out
-  }, [ours, externalPins])
+  }, [ours, externalPins, otherPins, showOthers])
+
+  // Toggle the "Other hospitals" layer — fetches the complete hospital
+  // directory (government + private + uncategorised) the first time it's turned on.
+  async function toggleOthers() {
+    if (showOthers) { setShowOthers(false); return }
+    setShowOthers(true)
+    if (otherPins.length === 0) {
+      try {
+        setLoadingOthers(true)
+        const all = await getAllMappableHospitals(3000)
+        setOtherPins(all)
+        toast.success(all.length
+          ? `Loaded ${all.length.toLocaleString()} hospitals from the directory.`
+          : 'No mappable directory hospitals found.')
+      } catch (err) {
+        console.error('Failed to load directory hospitals:', err)
+        toast.error('Could not load other hospitals. Please try again.')
+        setShowOthers(false)
+      } finally {
+        setLoadingOthers(false)
+      }
+    }
+  }
 
   const nearby = useMemo(() => {
     if (userLocation) {
@@ -244,9 +273,22 @@ export default function HospitalDiscovery() {
               height="460px"
             />
           </div>
-          <div className="d-flex align-items-center gap-3 mt-2 px-1" style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+          <div className="d-flex align-items-center flex-wrap gap-3 mt-2 px-1" style={{ fontSize: 12, color: 'var(--gray-500)' }}>
             <span><i className="bi bi-hospital-fill me-1" style={{ color: 'var(--primary)' }} />On MediBook</span>
-            <span><i className="bi bi-geo-alt-fill me-1" style={{ color: '#0E7490' }} />Other hospitals</span>
+            <span><i className="bi bi-geo-alt-fill me-1" style={{ color: '#0E7490' }} />Reviewed elsewhere</span>
+            {showOthers && <span><i className="bi bi-building me-1" style={{ color: '#D97706' }} />Directory hospitals</span>}
+            <button
+              type="button"
+              className="btn-ghost ms-auto"
+              onClick={toggleOthers}
+              disabled={loadingOthers}
+              aria-pressed={showOthers}
+              style={{ fontSize: 12, padding: '5px 12px', color: showOthers ? '#B45309' : 'var(--primary)' }}
+            >
+              {loadingOthers
+                ? <><span className="spinner-custom" style={{ width: 12, height: 12, borderWidth: 2 }} /> Loading…</>
+                : <><i className={`bi ${showOthers ? 'bi-toggle-on' : 'bi-toggle-off'} me-1`} />Other hospitals</>}
+            </button>
           </div>
         </div>
 
@@ -396,7 +438,7 @@ export default function HospitalDiscovery() {
                 )}
               </div>
 
-              {!selected.external && (
+              {!selected.external && !selected.dictionary && (
                 <Link to="/doctors" className="btn-primary-custom w-100 justify-content-center mb-3" style={{ fontSize: 13 }}>
                   <i className="bi bi-calendar-check me-1" />Find doctors &amp; book
                 </Link>
@@ -407,8 +449,15 @@ export default function HospitalDiscovery() {
                   This hospital isn’t on MediBook yet. You can still rate it to help others.
                 </div>
               )}
+              {selected.dictionary && (
+                <div style={{ background: 'rgba(217,119,6,0.08)', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: 'var(--gray-600)', marginBottom: 16 }}>
+                  <i className="bi bi-info-circle me-1" style={{ color: '#D97706' }} />
+                  Listed in the national hospital directory. Shown for reference — reviews aren’t available for directory listings.
+                </div>
+              )}
 
-              {/* Review form */}
+              {/* Review form — hidden for directory listings (not reviewable) */}
+              {!selected.dictionary && (
               <div className="detail-section">
                 <div className="detail-section-title"><i className="bi bi-chat-heart me-1" />Your Opinion</div>
                 {!user ? (
@@ -441,8 +490,10 @@ export default function HospitalDiscovery() {
                   </form>
                 )}
               </div>
+              )}
 
               {/* Reviews list */}
+              {!selected.dictionary && (
               <div className="detail-section">
                 <div className="detail-section-title">Recent Reviews</div>
                 {loadingDetail ? (
@@ -463,6 +514,7 @@ export default function HospitalDiscovery() {
                   </div>
                 )}
               </div>
+              )}
             </div>
           </div>
         </>

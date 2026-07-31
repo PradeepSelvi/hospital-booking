@@ -34,6 +34,7 @@ export default function HospitalsMap({
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef(new Map()) // placeKey -> marker
+  const clusterRef = useRef(null)      // markerClusterGroup (or null if plugin missing)
   const userMarkerRef = useRef(null)
   const routeLayerRef = useRef(null)
   const fitDoneRef = useRef(null) // last fitSignal we've auto-fit for
@@ -52,10 +53,74 @@ export default function HospitalsMap({
       scrollWheelZoom: true,
       zoomControl: true,
     })
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+    // ── Base layers (Google-Maps-like map / satellite / hybrid switch) ──
+    const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 19,
-    }).addTo(map)
+    })
+    // Esri World Imagery — free satellite tiles, no API key required.
+    const satellite = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      {
+        attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
+        maxZoom: 19,
+      }
+    )
+    // Reference labels (roads, place names) drawn on top of satellite = "Hybrid".
+    const labels = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: 19 }
+    )
+    const hybrid = L.layerGroup([satellite, labels])
+
+    streets.addTo(map) // default base layer
+
+    L.control.layers(
+      { Map: streets, Satellite: satellite, Hybrid: hybrid },
+      {},
+      { position: 'topright', collapsed: true }
+    ).addTo(map)
+
+    // Distance scale bar (bottom-left), like Google Maps.
+    L.control.scale({ position: 'bottomleft', imperial: false }).addTo(map)
+
+    // Cluster group so dense pins (e.g. the full directory) group into counts.
+    // Falls back to plain markers if the plugin failed to load.
+    if (typeof L.markerClusterGroup === 'function') {
+      const cluster = L.markerClusterGroup({
+        chunkedLoading: true,
+        maxClusterRadius: 50,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+      })
+      map.addLayer(cluster)
+      clusterRef.current = cluster
+    }
+
+    // ── Custom fullscreen control ──
+    const FullscreenControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd() {
+        const btn = L.DomUtil.create('a', 'leaflet-bar leaflet-control leaflet-control-fullscreen')
+        btn.href = '#'
+        btn.title = 'Toggle fullscreen'
+        btn.setAttribute('role', 'button')
+        btn.setAttribute('aria-label', 'Toggle fullscreen')
+        btn.innerHTML = '<i class="bi bi-arrows-fullscreen"></i>'
+        L.DomEvent.on(btn, 'click', L.DomEvent.stop).on(btn, 'click', () => {
+          const el = containerRef.current?.closest('.hospital-map-wrapper') || containerRef.current
+          if (!document.fullscreenElement) {
+            el?.requestFullscreen?.().then(() => setTimeout(() => map.invalidateSize(), 200)).catch(() => {})
+          } else {
+            document.exitFullscreen?.().then(() => setTimeout(() => map.invalidateSize(), 200)).catch(() => {})
+          }
+        })
+        return btn
+      },
+    })
+    map.addControl(new FullscreenControl())
+
     mapRef.current = map
 
     return () => {
@@ -71,7 +136,11 @@ export default function HospitalsMap({
     const L = window.L
     let cls = 'hospital-marker-pin'
     let icon = 'bi-hospital-fill'
-    if (place.govt) {
+    if (place.dictionary && !place.govt) {
+      // Full-directory (private / uncategorised) hospital.
+      cls = 'hospital-marker-pin dictionary'
+      icon = 'bi-building'
+    } else if (place.govt) {
       cls = 'hospital-marker-pin govt'
       icon = 'bi-hospital-fill'
     } else if (place.external) {
@@ -93,7 +162,9 @@ export default function HospitalsMap({
     if (!map || !leafletReady()) return
     const L = window.L
 
-    markersRef.current.forEach(m => map.removeLayer(m))
+    const cluster = clusterRef.current
+    if (cluster) cluster.clearLayers()
+    else markersRef.current.forEach(m => map.removeLayer(m))
     markersRef.current = new Map()
 
     const points = []
@@ -101,14 +172,18 @@ export default function HospitalsMap({
       if (h.latitude == null || h.longitude == null) return
       if (Number.isNaN(h.latitude) || Number.isNaN(h.longitude)) return
 
-      const marker = L.marker([h.latitude, h.longitude], { icon: makeIcon(h) }).addTo(map)
-      const ratingLine = h.govt
+      const marker = L.marker([h.latitude, h.longitude], { icon: makeIcon(h) })
+      if (cluster) cluster.addLayer(marker)
+      else marker.addTo(map)
+      const ratingLine = (h.govt || h.dictionary)
         ? (h.care_type ? `<div style="font-size:12px;color:#059669;margin-top:2px;">${escapeHtml(h.care_type)}</div>` : '')
         : h.review_count > 0
           ? `<div style="font-size:12px;color:#F59E0B;margin-top:2px;">★ ${Number(h.avg_rating).toFixed(1)} <span style="color:#888;">(${h.review_count})</span></div>`
           : `<div style="font-size:12px;color:#999;margin-top:2px;">No reviews yet</div>`
       const badge = h.govt
         ? `<span style="font-size:10px;font-weight:700;color:#059669;background:rgba(5,150,105,.1);padding:1px 6px;border-radius:8px;">Govt Hospital</span>`
+        : h.dictionary
+          ? `<span style="font-size:10px;font-weight:700;color:#B45309;background:rgba(217,119,6,.12);padding:1px 6px;border-radius:8px;">Directory</span>`
         : h.external
           ? `<span style="font-size:10px;font-weight:700;color:#0E7490;background:rgba(14,116,144,.1);padding:1px 6px;border-radius:8px;">Not on MediBook</span>`
           : `<span style="font-size:10px;font-weight:700;color:#0077B6;background:rgba(0,119,182,.1);padding:1px 6px;border-radius:8px;">MediBook</span>`
@@ -177,8 +252,15 @@ export default function HospitalsMap({
     if (!map || focusKey == null) return
     const marker = markersRef.current.get(focusKey)
     if (marker) {
-      map.flyTo(marker.getLatLng(), 15, { duration: 0.6 })
-      marker.openPopup()
+      const cluster = clusterRef.current
+      if (cluster && typeof cluster.zoomToShowLayer === 'function') {
+        // Un-cluster the marker first so its popup is actually visible.
+        cluster.zoomToShowLayer(marker, () => marker.openPopup())
+        map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 14), { duration: 0.6 })
+      } else {
+        map.flyTo(marker.getLatLng(), 15, { duration: 0.6 })
+        marker.openPopup()
+      }
     }
   }, [focusKey])
 
